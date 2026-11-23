@@ -578,7 +578,7 @@ function renderBackup(){
     <span class="saved" id="bMsg"></span>
   </div>
   <h2>Materiais sem internet</h2>
-  <p class="note">Cada material fica guardado no aparelho depois de aberto uma vez. Para guardar todos de uma vez (cerca de 55 MB), use o botão abaixo com Wi-Fi.</p>
+  <p class="note">Cada material fica guardado no aparelho depois de aberto uma vez. Para guardar todos de uma vez (cerca de 80 MB), use o botão abaixo com Wi-Fi.</p>
   <div class="card" style="display:grid;gap:10px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn" id="bAll">Guardar todos os materiais</button><span class="saved" id="bAllMsg"></span></div></div>`;
   document.getElementById("bExp").onclick=()=>{
     const data=JSON.stringify({app:"Painel TRT8",versao:1,exportado:new Date().toISOString(),dias:LOG,simulados:SIM,erros:ERR},null,1);
@@ -591,8 +591,8 @@ function renderBackup(){
       LOG=d.dias||{}; SIM=d.simulados||{}; ERR=d.erros||[]; persist(); renderBackup(); document.getElementById("bMsg").textContent="Backup importado.";
     }catch(_){ msg.textContent="Este arquivo não é um backup do Painel de Estudos."; } };
   document.getElementById("bAll").onclick=async()=>{ const m=document.getElementById("bAllMsg"); let ok=0;
-    for(const x of MATS){ m.textContent=`Guardando ${x.n} de 15…`; try{ const r=await fetch("pdf/"+x.n+".pdf"); if(r.ok){ await r.arrayBuffer(); ok++; } }catch(_){} }
-    m.textContent= ok===MATS.length ? "Os 15 materiais estão guardados no aparelho." : `${ok} de 15 guardados. Confira a conexão e toque de novo.`; };
+    for(const x of MATS){ m.textContent=`Guardando ${x.n} de ${MATS.length}…`; try{ const r=await fetch("pdf/"+x.n+".pdf"); if(r.ok){ await r.arrayBuffer(); ok++; } }catch(_){} }
+    m.textContent= ok===MATS.length ? `Os ${MATS.length} materiais estão guardados no aparelho.` : `${ok} de ${MATS.length} guardados. Confira a conexão e toque de novo.`; };
 }
 window.addEventListener("pagehide",()=>{ if(canWrite) persist(); }); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"&&canWrite) persist(); });
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
