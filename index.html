@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1D6B5C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Painel TRT8">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Painel TRT8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: painel de acompanhamento em abas; cabeçalho com contagem regressiva, conteúdo em coluna única de até 980px */
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --sunk:#E8ECEA; --line:#D3DAD7; --fg:#18221F; --muted:#5B6A65;
+  --accent:#1D6B5C; --accent-ink:#FFFFFF; --accent-soft:#D9EBE6;
+  --ok:#2E7D4F; --ok-soft:#DDF0E3; --warn:#A86A06; --warn-soft:#F7EBD2; --bad:#B23A3A; --bad-soft:#F6DEDC;
+  --display:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --body:Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111816; --surface:#18211E; --sunk:#0D1311; --line:#2B3834; --fg:#E4ECE9; --muted:#93A39E;
+  --accent:#5FBFA8; --accent-ink:#0C1613; --accent-soft:#1E3A33;
+  --ok:#6CC58F; --ok-soft:#1D3527; --warn:#E3AE52; --warn-soft:#3A2E17; --bad:#EE8A84; --bad-soft:#3D2120; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111816; --surface:#18211E; --sunk:#0D1311; --line:#2B3834; --fg:#E4ECE9; --muted:#93A39E;
+  --accent:#5FBFA8; --accent-ink:#0C1613; --accent-soft:#1E3A33;
+  --ok:#6CC58F; --ok-soft:#1D3527; --warn:#E3AE52; --warn-soft:#3A2E17; --bad:#EE8A84; --bad-soft:#3D2120; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.toprow{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding-block:16px 10px}
+h1{font-family:var(--display);font-size:1.6rem;margin:0;line-height:1.15;text-wrap:balance}
+.sub{color:var(--muted);font-size:.85rem;margin-top:2px}
+.count{display:flex;gap:8px}
+.dchip{border:1px solid var(--line);border-radius:8px;padding:4px 10px;text-align:center;min-width:86px}
+.dchip b{display:block;font-family:var(--mono);font-size:1.15rem;font-variant-numeric:tabular-nums}
+.dchip span{font-size:.72rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.dchip.main{border-color:var(--accent);background:var(--accent-soft)}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{padding:8px 12px;color:var(--muted);text-decoration:none;font-weight:600;font-size:.9rem;border-bottom:2px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-block:20px 48px;display:grid;gap:20px}
+main>section{display:grid;gap:16px;min-width:0}
+@media (max-width:700px){header.top{position:static}}
+h2{font-family:var(--display);font-size:1.25rem;margin:0 0 10px;text-wrap:balance}
+h3{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.note{font-size:.85rem;color:var(--muted)}
+.banner{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;font-size:.88rem}
+.banner.warn{border-color:var(--warn);background:var(--warn-soft)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.kpi .v{font-family:var(--mono);font-size:1.35rem;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:.78rem;color:var(--muted)}
+.bar{height:6px;background:var(--sunk);border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent)}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.dayhead .date{font-family:var(--display);font-size:1.15rem;font-weight:700}
+.item{padding:12px 14px;border-top:1px solid var(--line);display:grid;gap:10px}
+.item:first-of-type{border-top:0}
+.mrow{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.mat{font-weight:700}
+.focus{font-size:.92rem;min-width:0}
+.meta{font-size:.8rem;color:var(--muted)}
+.guia{font-size:.82rem;background:var(--sunk);border-radius:6px;padding:6px 8px}
+.mats{display:flex;flex-wrap:wrap;gap:6px}
+.mtag{font-size:.78rem;border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:var(--bg)}
+.mtag b{font-family:var(--mono);font-weight:500;color:var(--accent)}
+.pill{font-size:.75rem;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.p-feito{background:var(--ok-soft);color:var(--ok)}.p-parcial{background:var(--warn-soft);color:var(--warn)}.p-atraso{background:var(--bad-soft);color:var(--bad)}.p-futuro{background:var(--sunk);color:var(--muted)}.p-hoje{background:var(--accent-soft);color:var(--accent)}
+.log{display:grid;grid-template-columns:auto repeat(3,minmax(70px,96px)) minmax(0,1fr);gap:8px;align-items:end}
+@media (max-width:700px){.log{grid-template-columns:repeat(3,minmax(0,1fr))}.log .seg,.log .obs{grid-column:1/-1}}
+label.f{display:grid;gap:2px;font-size:.74rem;color:var(--muted);min-width:0}
+input,select,textarea{font:inherit;font-size:.9rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input[type=number]{font-family:var(--mono);font-variant-numeric:tabular-nums}
+textarea{resize:vertical;min-height:38px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;align-self:end}
+.seg button{font:inherit;font-size:.82rem;font-weight:600;padding:6px 10px;border:0;background:var(--bg);color:var(--muted);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"][data-v="feito"]{background:var(--ok);color:var(--surface)}
+.seg button[aria-pressed="true"][data-v="parcial"]{background:var(--warn);color:var(--surface)}
+.seg button[aria-pressed="true"][data-v="nao"]{background:var(--bad);color:var(--surface)}
+button.btn{font:inherit;font-weight:600;font-size:.88rem;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:7px;padding:7px 14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55;cursor:not-allowed}
+.saved{font-size:.75rem;color:var(--muted);min-height:1em}
+.week{display:grid;gap:8px}
+.wkhead{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:8px}
+details.row{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+details.row>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:10px;padding:9px 12px;align-items:center}
+details.row>summary::-webkit-details-marker{display:none}
+details.row[open]>summary{border-bottom:1px solid var(--line)}
+details.row .dd{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+details.row .dd small{display:block;color:var(--muted);font-family:var(--body);font-size:.7rem}
+details.row .t{min-width:0}
+details.row .t .mat{font-size:.88rem}
+details.row .t .focus{font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+details.row .body{padding:10px 12px;display:grid;gap:10px}
+details.row.today{border-color:var(--accent)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filters select{width:auto}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--sunk)}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.acc{display:flex;align-items:center;gap:8px;min-width:120px}
+.acc .bar{flex:1;margin:0}
+.acc .bar i.good{background:var(--ok)}.acc .bar i.mid{background:var(--warn)}.acc .bar i.low{background:var(--bad)}
+svg text{fill:var(--muted);font-family:var(--body);font-size:11px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.formgrid .wide{grid-column:1/-1}
+@media (max-width:600px){.formgrid{grid-template-columns:minmax(0,1fr)}}
+.err{display:grid;gap:6px}
+.err .rule{font-size:.9rem}
+.err .bot{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:.8rem;color:var(--muted)}
+.err .bot select{width:auto;font-size:.8rem;padding:3px 6px}
+.empty{padding:18px;text-align:center;color:var(--muted);font-size:.9rem;border:1px dashed var(--line);border-radius:8px}
+.mtag{cursor:pointer;font:inherit;font-size:.78rem;color:var(--fg)}
+.mtag:hover{border-color:var(--accent)}
+.matlist{display:grid;gap:10px}
+.matcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px}
+.matcard .mrow b.num{font-family:var(--mono);color:var(--accent);margin-right:6px}
+.matcard details summary{cursor:pointer;font-size:.82rem;color:var(--muted)}
+.toc{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px}
+.toc button{all:unset;cursor:pointer;display:flex;justify-content:space-between;gap:12px;font-size:.84rem;padding:4px 6px;border-radius:5px;width:100%;box-sizing:border-box}
+.toc button:hover,.toc button:focus-visible{background:var(--sunk)}
+.toc .pg{font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+#viewer{position:fixed;inset:0;z-index:50;background:var(--sunk);display:flex;flex-direction:column}
+#viewer .vbar{background:var(--surface);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top,0px) + 8px) max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#viewer .vt{font-weight:700;font-size:.9rem;flex:1 1 180px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#viewer .vctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#viewer .vctl button{font:inherit;font-size:.85rem;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;padding:5px 10px;cursor:pointer;min-width:34px}
+#viewer .vctl input{width:58px;text-align:center;padding:4px}
+#viewer .vctl select{width:auto;max-width:min(320px,70vw);font-size:.82rem;padding:4px 6px}
+#viewer .vpage{flex:1;overflow:auto;padding:12px max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(12px,env(safe-area-inset-left,0px));-webkit-overflow-scrolling:touch}
+#viewer canvas{display:block;margin:0 auto;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);max-width:none}
+#viewer .vmsg{text-align:center;color:var(--muted);padding:40px 12px}
+body.noscroll{overflow:hidden}
+@media (max-width:600px){#viewer .vctl{width:100%}#viewer .vctl select{max-width:none;flex:1 1 100%}}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
+a.btn,label.btn{display:inline-flex;align-items:center;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:7px;padding:7px 14px;font-weight:600;font-size:.88rem;cursor:pointer}
+html{color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark}}
+body{margin:0;-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="toprow">
+      <div>
+        <h1>Painel TRT8</h1>
+        <div class="sub">Analista Judiciário · Área Judiciária · cronograma reiniciado em 23/11/2026 · registros guardados neste aparelho</div>
+      </div>
+      <div class="count">
+        <div class="dchip main"><b id="dTRT8">–</b><span>TRT8 · 17/01</span></div>
+        <div class="dchip"><b id="dTRT4">–</b><span>TRT4 · 31/01</span></div>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Seções">
+      <a href="#hoje" data-v="hoje">Hoje</a>
+      <a href="#cronograma" data-v="cronograma">Cronograma</a>
+      <a href="#desempenho" data-v="desempenho">Desempenho</a>
+      <a href="#simulados" data-v="simulados">Simulados</a>
+      <a href="#materiais" data-v="materiais">Materiais</a>
+      <a href="#erros" data-v="erros">Caderno de erros</a>
+      <a href="#backup" data-v="backup">Backup</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+    <div id="status" class="banner" role="status" hidden></div>
+    <section id="v-hoje" data-view="hoje"></section>
+    <section id="v-cronograma" data-view="cronograma" hidden></section>
+    <section id="v-desempenho" data-view="desempenho" hidden></section>
+    <section id="v-simulados" data-view="simulados" hidden></section>
+    <section id="v-erros" data-view="erros" hidden></section>
+    <section id="v-materiais" data-view="materiais" hidden></section>
+    <section id="v-backup" data-view="backup" hidden></section>
+  </main>
+</div>
+
+<div id="viewer" hidden role="dialog" aria-modal="true" aria-label="Leitor de material">
+  <div class="vbar">
+    <button type="button" class="btn" id="vClose">Fechar</button>
+    <div class="vt" id="vTitle"></div>
+    <div class="vctl">
+      <select id="vToc" aria-label="Ir para a parte"></select>
+      <button type="button" id="vPrev" aria-label="Página anterior">‹</button>
+      <input id="vPg" type="number" min="1" inputmode="numeric" aria-label="Página"><span class="meta" id="vTot"></span>
+      <button type="button" id="vNext" aria-label="Próxima página">›</button>
+      <button type="button" id="vOut" aria-label="Diminuir">−</button>
+      <button type="button" id="vIn" aria-label="Aumentar">+</button>
+      <a id="vDl" class="btn ghost" style="text-decoration:none;font-size:.85rem;padding:5px 10px;border-radius:6px" target="_blank" rel="noopener">Abrir no leitor do aparelho</a>
+    </div>
+  </div>
+  <div class="vpage" id="vPage"><div class="vmsg" id="vMsg">Carregando…</div><canvas id="vCanvas" hidden></canvas></div>
+</div>
+
+<script src="lib/pdf.min.js"></script>
+<script>
+const DATA = {"rows":[{"k":"2026-11-23-0","d":"2026-11-23","fase":"1. Ciclo principal","m":"Direito do Trabalho","f":"Duração do trabalho: jornada, intervalos, DSR, trabalho noturno e extraordinário, compensação e banco de horas (atenção à Reforma)","a":"Teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-11-24-0","d":"2026-11-24","fase":"1. Ciclo principal","m":"Direito Processual do Trabalho","f":"Sentença e coisa julgada; liquidação; recursos no processo do trabalho","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-11-25-0","d":"2026-11-25","fase":"1. Ciclo principal","m":"Raciocínio Lógico e Matemática","f":"Razões e proporções; divisão proporcional; regra de três; porcentagem, acréscimos e descontos","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-11-26-0","d":"2026-11-26","fase":"1. Ciclo principal","m":"Direito Administrativo","f":"Bloco 1 (2h30): Agentes públicos; Lei nº 8.112/1990; Lei nº 11.416/2006; PAD; responsabilidade dos agentes","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"Semana 1, Meta 3: agentes públicos. Aulas: tópicos 5 e 6. PDF sintético: tópicos 12 e 13. Videoaula só nos pontos de dúvida","h":2.5,"q":30},{"k":"2026-11-26-1","d":"2026-11-26","fase":"1. Ciclo principal","m":"Legislação e Direitos Humanos","f":"Bloco 2 (1h30): Código de Ética do TRT8 (Res. TRT8 nº 88/2012) e primeira leitura do Regimento Interno do TRT8, com foco nas competências dos órgãos; o Regimento do TRT4 fica para 19/01","a":"Leitura ativa + questões","g":"","h":1.5,"q":10},{"k":"2026-11-27-0","d":"2026-11-27","fase":"1. Ciclo principal","m":"Língua Portuguesa","f":"Compreensão e interpretação de textos; relação do texto com o contexto","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"Semana 1, Meta 1: interpretação de textos. Aulas: tópico 3, aulas 1 a 10. PDF: tópico 1, PDF 2. Resolver 30 questões antes da teoria","h":3,"q":40},{"k":"2026-11-28-0","d":"2026-11-28","fase":"1. Ciclo principal","m":"Direito Civil","f":"Pessoa natural e jurídica; personalidade; domicílio; bens; negócio jurídico; prescrição e decadência; prova","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"Semana 1, Meta 6: pessoas e bens. Aulas 1 a 12. PDF: tópico 1, PDFs 3 e 5; tópico 2, PDF 1. Ler os arts. 1º a 103 do Código Civil","h":4,"q":50},{"k":"2026-11-29-0","d":"2026-11-29","fase":"1. Ciclo principal","m":"Simulado + revisão","f":"Simulado 1: diagnóstico modelo TRT8 (20 gerais + 40 específicas, sem discursiva), pela manhã; à tarde, correção, revisão da semana pelo Caderno de Revisão e questões reais R1 e R2 do material de Estudo de Caso (15 linhas cada)","a":"Simulado + correção + revisão + discursiva","g":"","h":7,"q":60},{"k":"2026-11-30-0","d":"2026-11-30","fase":"1. Ciclo principal","m":"Direito do Trabalho","f":"Rescisão; justas causas; despedida indireta; acordo mútuo; aviso prévio; estabilidades e garantias provisórias","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-12-01-0","d":"2026-12-01","fase":"1. Ciclo principal","m":"Direito Processual do Trabalho","f":"Execução; IDPJ; garantias; penhora; bens impenhoráveis; embargos; praça, leilão e arrematação","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-12-02-0","d":"2026-12-02","fase":"1. Ciclo principal","m":"Direito Constitucional","f":"Direitos e deveres individuais e coletivos; direitos sociais; nacionalidade; direitos políticos e partidos","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"Semana 1, Meta 2: direitos fundamentais. Aulas: tópico 2, aulas 1 a 20. PDF: tópico 3, PDFs 4 e 6. Ler o art. 5º da CF antes das questões","h":3,"q":40},{"k":"2026-12-03-0","d":"2026-12-03","fase":"1. Ciclo principal","m":"Direito Processual Civil","f":"Jurisdição e ação; competência; atos e prazos; nulidades; petição inicial; resposta do réu; revelia; tutela provisória","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"Semana 1, Meta 7: jurisdição, ação e competência. Aulas: tópico 1, aulas 4 a 14. PDF: tópico 1, PDF 2, e tópico 5, PDF 2","h":3,"q":40},{"k":"2026-12-04-0","d":"2026-12-04","fase":"1. Ciclo principal","m":"Língua Portuguesa","f":"Bloco 1: Concordância nominal e verbal. Bloco 2: Regência nominal e verbal; crase","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-05-0","d":"2026-12-05","fase":"1. Ciclo principal","m":"Direito Administrativo","f":"Bloco 1: Regime jurídico; princípios; LINDB; poderes; abuso de autoridade; ato administrativo; Lei nº 9.784/1999. Bloco 2: Licitações e contratos (Lei nº 14.133/2021): procedimento, sanções, crimes, execução e extinção","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-06-0","d":"2026-12-06","fase":"1. Ciclo principal","m":"Simulado + revisão","f":"Simulado 2: prova do TRT4 de 2022 (FCC, 30 gerais + 30 específicas), sem a redação; revisar os erros e conferir alterações legais","a":"Simulado + correção","g":"","h":6,"q":60},{"k":"2026-12-07-0","d":"2026-12-07","fase":"1. Ciclo principal","m":"Direito do Trabalho","f":"Bloco 1: Contrato individual; trabalho intermitente; alteração do contrato; suspensão e interrupção. Bloco 2: Relação de trabalho e de emprego; empregado e empregador; grupo econômico; sucessão; responsabilidade solidária e subsidiária","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"Semana 1, Meta 4: relação de trabalho. Aulas: tópico 1, aulas 9 a 11. PDF: tópico 1, PDF 6, páginas 5 a 19","h":6,"q":40},{"k":"2026-12-08-0","d":"2026-12-08","fase":"1. Ciclo principal","m":"Direito Processual do Trabalho","f":"Bloco 1: Organização e competência da Justiça do Trabalho; serviços auxiliares; peritos; Ministério Público do Trabalho. Bloco 2: Partes e procuradores; jus postulandi; substituição e representação; litisconsórcio; assistência judiciária; honorários (atenção à Reforma)","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"Semana 1, Meta 5: Justiça do Trabalho, jurisdição e competência. Aulas: tópico 1 (o quadro indica aulas 2 a 7; a meta, aulas 1 a 9). PDF: páginas 6 a 55 e 6 a 63","h":6,"q":40},{"k":"2026-12-08-1","d":"2026-12-08","fase":"1. Ciclo principal","m":"Direito Processual Civil","f":"Partes e procuradores; juiz e auxiliares; Ministério Público, Defensoria e Advocacia; litisconsórcio; intervenção de terceiros (tema de 19/11, estudado junto com as partes no processo do trabalho)","a":"Bloco extra de Processo Civil: teoria + questões FCC (2h)","g":"","h":2,"q":15},{"k":"2026-12-09-0","d":"2026-12-09","fase":"1. Ciclo principal","m":"Raciocínio Lógico e Matemática","f":"Bloco 1: Estrutura lógica de relações arbitrárias; dedução; raciocínio verbal e sequencial. Bloco 2: Números inteiros e racionais; expressões; múltiplos e divisores; frações","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-10-0","d":"2026-12-10","fase":"1. Ciclo principal","m":"Legislação e Direitos Humanos","f":"Bloco 1: Res. CNJ nº 400/2021, CNJ nº 351/2020, CSJT nº 360/2023, CNJ nº 492/2023 e CSJT nº 368/2023. Bloco 2: Direitos humanos: evolução, fundamentos, fontes, classificação, princípios, gerações e colisão de direitos","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-11-0","d":"2026-12-11","fase":"1. Ciclo principal","m":"Língua Portuguesa","f":"Bloco 1: Pontuação; ortografia e acentuação. Bloco 2: Pronomes; flexões; vozes verbais; tempos e modos","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-12-0","d":"2026-12-12","fase":"1. Ciclo principal","m":"Direito Civil","f":"Bloco 1: Direito das obrigações: modalidades, transmissão, adimplemento, extinção e inadimplemento. Bloco 2: Contratos em geral e em espécie; vícios redibitórios e evicção","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-13-0","d":"2026-12-13","fase":"1. Ciclo principal","m":"Revisão semanal","f":"Revisar as matérias da semana e os erros em questões; produzir 1 estudo de caso em tempo cronometrado; bateria de questões mistas das matérias já estudadas","a":"Revisão + discursiva","g":"","h":6,"q":null},{"k":"2026-12-14-0","d":"2026-12-14","fase":"1. Ciclo principal","m":"Direito do Trabalho","f":"Bloco 1: Salário e remuneração; 13º salário; salário mínimo; equiparação e igualdade salarial; férias. Bloco 2: Segurança e medicina do trabalho; proteção à mulher, gestante e menor; teletrabalho; dano moral e material","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-14-1","d":"2026-12-14","fase":"1. Ciclo principal","m":"Direito Civil","f":"Atos unilaterais; títulos de crédito; responsabilidade civil","a":"Bloco extra de Direito Civil: teoria + questões FCC (2h)","g":"","h":2,"q":15},{"k":"2026-12-15-0","d":"2026-12-15","fase":"1. Ciclo principal","m":"Direito Processual do Trabalho","f":"Bloco 1: Princípios; aplicação subsidiária do CPC; atos, termos e prazos; distribuição; valor da causa; custas e emolumentos. Bloco 2: Nulidades e exceções; audiências; notificação; arquivamento; revelia e confissão","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-15-1","d":"2026-12-15","fase":"1. Ciclo principal","m":"Direito Civil","f":"Direito de empresa; nome empresarial","a":"Bloco extra de Direito Civil: teoria + questões FCC (2h)","g":"","h":2,"q":15},{"k":"2026-12-16-0","d":"2026-12-16","fase":"1. Ciclo principal","m":"Direito Constitucional","f":"Bloco 1: Organização do Estado; intervenção; Administração Pública e servidores. Bloco 2: Poderes Executivo e Legislativo; processo legislativo; fiscalização; Poder Judiciário, CNJ, TST, TRTs e CSJT; funções essenciais à Justiça","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-16-1","d":"2026-12-16","fase":"1. Ciclo principal","m":"Direito Civil","f":"Posse; propriedade; direitos reais sobre coisa alheia e de garantia; laje; concessão de uso especial para fins de moradia","a":"Bloco extra de Direito Civil: teoria + questões FCC (2h)","g":"","h":2,"q":15},{"k":"2026-12-17-0","d":"2026-12-17","fase":"1. Ciclo principal","m":"Direito Processual Civil","f":"Bloco 1: Julgamento conforme o estado do processo; provas; audiência; sentença e coisa julgada; recursos; ação rescisória. Bloco 2: Liquidação e cumprimento de sentença; execução; embargos; procedimentos especiais; mandado de segurança; ação civil pública; Juizados Especiais; mediação","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-17-1","d":"2026-12-17","fase":"1. Ciclo principal","m":"Direito Civil","f":"Direito de família: casamento, dissolução, filiação, poder familiar, regime de bens, bem de família, união estável, tutela e curatela","a":"Bloco extra de Direito Civil: teoria + questões FCC (2h)","g":"","h":2,"q":15},{"k":"2026-12-18-0","d":"2026-12-18","fase":"1. Ciclo principal","m":"Língua Portuguesa","f":"Bloco 1: Morfossintaxe; formação de palavras; coordenação e subordinação. Bloco 2: Reescrita; organização e equivalência de períodos; sinonímia e antonímia; conectivos","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-18-1","d":"2026-12-18","fase":"1. Ciclo principal","m":"Direito Civil","f":"Direito das sucessões; inventário e partilha; arrolamentos; alvarás judiciais","a":"Bloco extra de Direito Civil: teoria + questões FCC (2h)","g":"","h":2,"q":15},{"k":"2026-12-19-0","d":"2026-12-19","fase":"1. Ciclo principal","m":"Direito Administrativo","f":"Improbidade; serviços públicos; concessões; PPPs; parcerias com o terceiro setor","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":4,"q":30},{"k":"2026-12-20-0","d":"2026-12-20","fase":"1. Ciclo principal","m":"Simulado + revisão","f":"Simulado 3: modelo TRT8 com estudo de caso; revisar os erros","a":"Simulado + correção","g":"","h":6,"q":60},{"k":"2026-12-21-0","d":"2026-12-21","fase":"1. Ciclo principal","m":"Direito do Trabalho","f":"FGTS; prescrição e decadência; renúncia e transação; arbitragem; comissões de conciliação prévia","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-12-22-0","d":"2026-12-22","fase":"1. Ciclo principal","m":"Direito Processual do Trabalho","f":"Provas; dissídios individuais; reclamação escrita e verbal; procedimentos ordinário e sumaríssimo","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-12-23-0","d":"2026-12-23","fase":"1. Ciclo principal","m":"Raciocínio Lógico e Matemática","f":"Orientação espacial e temporal; formação de conceitos; discriminação de elementos; validade de conclusões","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2026-12-24-0","d":"2026-12-24","fase":"1. Ciclo principal","m":"Folga","f":"Véspera de Natal","a":"Sem estudo","g":"","h":0,"q":null},{"k":"2026-12-25-0","d":"2026-12-25","fase":"1. Ciclo principal","m":"Folga","f":"Natal","a":"Sem estudo","g":"","h":0,"q":null},{"k":"2026-12-26-0","d":"2026-12-26","fase":"1. Ciclo principal","m":"Informática","f":"Windows 10 e 11; Google Workspace; Microsoft Office 365; redes, internet e intranet; navegadores; busca; arquivos; segurança da informação","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":4,"q":30},{"k":"2026-12-27-0","d":"2026-12-27","fase":"1. Ciclo principal","m":"Revisão semanal","f":"Revisar as matérias da semana e os erros em questões; produzir 1 estudo de caso em tempo cronometrado; incluir questões de Português, por não haver sexta-feira de estudo nesta semana","a":"Revisão + discursiva","g":"","h":4,"q":null},{"k":"2026-12-28-0","d":"2026-12-28","fase":"1. Ciclo principal","m":"Direito do Trabalho","f":"Princípios e fontes; direitos constitucionais dos trabalhadores (art. 7º da CF)","a":"Revisão 24h + teoria e questões FCC (4h) + bateria de questões mistas e caderno de erros (2h)","g":"","h":6,"q":45},{"k":"2026-12-29-0","d":"2026-12-29","fase":"1. Ciclo principal","m":"Direito Processual do Trabalho","f":"Procedimentos especiais: inquérito, ação rescisória e mandado de segurança; ação civil pública; dissídios coletivos","a":"Revisão 24h + teoria e questões FCC (4h) + bateria de questões mistas e caderno de erros (2h)","g":"","h":6,"q":45},{"k":"2026-12-30-0","d":"2026-12-30","fase":"1. Ciclo principal","m":"Legislação e Direitos Humanos","f":"Bloco 1: Tratados e CF/88; controle de convencionalidade; DUDH; PIDCP; PIDESC. Bloco 2: Tribunal Penal Internacional (Estatuto de Roma); Carta das Nações Unidas e Estatuto da CIJ","a":"Revisão 24h + dois blocos de teoria e questões FCC + caderno de erros","g":"","h":6,"q":50},{"k":"2026-12-31-0","d":"2026-12-31","fase":"1. Ciclo principal","m":"Folga","f":"Véspera de Ano Novo","a":"Sem estudo","g":"","h":0,"q":null},{"k":"2027-01-01-0","d":"2027-01-01","fase":"1. Ciclo principal","m":"Folga","f":"Confraternização Universal","a":"Sem estudo","g":"","h":0,"q":null},{"k":"2027-01-02-0","d":"2027-01-02","fase":"1. Ciclo principal","m":"Direito Administrativo","f":"Controle; responsabilidade do Estado; bens públicos; LAI; LGPD","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":4,"q":30},{"k":"2027-01-03-0","d":"2027-01-03","fase":"1. Ciclo principal","m":"Simulado + revisão","f":"Simulado 4: modelo TRT8 completo, pela manhã, em 4h30; revisar os erros","a":"Simulado + correção","g":"","h":6,"q":60},{"k":"2027-01-04-0","d":"2027-01-04","fase":"1. Ciclo principal","m":"Direito do Trabalho","f":"Direito coletivo: organização sindical, convenções e acordos, greve; súmulas, OJs e repercussão geral","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2027-01-05-0","d":"2027-01-05","fase":"1. Ciclo principal","m":"Direito Processual do Trabalho","f":"Prescrição intercorrente; PJe; uniformização, IAC e IRDR; súmulas, OJs, INs do TST e repercussão geral","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2027-01-06-0","d":"2027-01-06","fase":"1. Ciclo principal","m":"Raciocínio Lógico e Matemática","f":"Estatística: tendência central, dispersão, gráficos e tabelas","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2027-01-07-0","d":"2027-01-07","fase":"1. Ciclo principal","m":"Direito Constitucional","f":"Controle de constitucionalidade; aplicabilidade e interpretação das normas; princípios fundamentais","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2027-01-08-0","d":"2027-01-08","fase":"1. Ciclo principal","m":"Língua Portuguesa","f":"Denotação e conotação; discursos; intertextualidade; figuras de linguagem; Redação Oficial","a":"Revisão 24h + teoria + questões FCC + caderno de erros","g":"","h":3,"q":25},{"k":"2027-01-09-0","d":"2027-01-09","fase":"1. Ciclo principal","m":"Direito Administrativo","f":"Agentes públicos e Lei nº 8.112/1990 em segunda passagem: provimento, vacância, direitos e vantagens, regime disciplinar e PAD (o dia era de Administração Pública, matéria só do Técnico)","a":"Revisão 24h + revisão dirigida + questões FCC + caderno de erros","g":"","h":4,"q":30},{"k":"2027-01-10-0","d":"2027-01-10","fase":"1. Ciclo principal","m":"Simulado + revisão","f":"Simulado 5: modelo TRT8 com estudo de caso (caso 8 do material de Estudo de Caso); revisar os erros","a":"Simulado + correção","g":"","h":6,"q":60},{"k":"2027-01-11-0","d":"2027-01-11","fase":"2. Reta final TRT8","m":"Legislação e Direitos Humanos","f":"TRT8: Regimento Interno, Código de Ética (Res. TRT8 nº 88/2012) e Res. TRT8 nº 065/2025, alterada pela nº 23/2026","a":"Leitura ativa + questões","g":"","h":3,"q":25},{"k":"2027-01-12-0","d":"2027-01-12","fase":"2. Reta final TRT8","m":"Legislação e Direitos Humanos","f":"TRT8: direitos das pessoas com deficiência (Res. CSJT nº 386/2024, art. 6º; Leis nº 13.146/2015, 11.126/2005, 10.098/2000, 10.048/2000, 8.160/1991 e 7.853/1989; Decretos nº 5.296/2004 e 3.298/1999)","a":"Leitura ativa + questões","g":"","h":3,"q":25},{"k":"2027-01-13-0","d":"2027-01-13","fase":"2. Reta final TRT8","m":"Direito do Trabalho","f":"TRT8: trabalho por plataformas, Lei nº 14.611/2023, teletrabalho, meio ambiente do trabalho e trabalho escravo contemporâneo","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-14-0","d":"2027-01-14","fase":"2. Reta final TRT8","m":"Direito Processual Civil","f":"TRT8: ordem dos processos nos tribunais, IAC, IRDR, reclamação, recursos, precedentes e Lei nº 11.419/2006","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-15-0","d":"2027-01-15","fase":"2. Reta final TRT8","m":"Língua Portuguesa","f":"Interpretação, reescrita, concordância, regência, crase e pontuação","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-16-0","d":"2027-01-16","fase":"2. Reta final TRT8","m":"Revisão leve","f":"Resumos, erros frequentes e conferência de documento e local de prova","a":"Revisão leve","g":"","h":1,"q":null},{"k":"2027-01-17-0","d":"2027-01-17","fase":"2. Reta final TRT8","m":"PROVA TRT8","f":"Analista Judiciário, Área Judiciária, pela manhã (conferir horários no Edital de Convocação)","a":"Prova","g":"","h":0,"q":null},{"k":"2027-01-18-0","d":"2027-01-18","fase":"3. Reta final TRT4","m":"Pós-prova","f":"Conferir o gabarito do TRT8 e descansar","a":"Correção","g":"","h":1,"q":null},{"k":"2027-01-19-0","d":"2027-01-19","fase":"3. Reta final TRT4","m":"Legislação e Direitos Humanos","f":"TRT4: Regimento Interno e Código de Conduta (Portaria GP.TRT4 nº 4.573/2023)","a":"Leitura ativa + questões","g":"","h":3,"q":25},{"k":"2027-01-20-0","d":"2027-01-20","fase":"3. Reta final TRT4","m":"Legislação e Direitos Humanos","f":"TRT4, visão panorâmica: convenções, sistema interamericano, Comissão e Corte, grupos vulneráveis e Protocolos para Atuação e Julgamento","a":"Leitura ativa + questões","g":"","h":3,"q":25},{"k":"2027-01-21-0","d":"2027-01-21","fase":"3. Reta final TRT4","m":"Direito Civil","f":"TRT4: negócio jurídico, obrigações, contratos e responsabilidade civil","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-22-0","d":"2027-01-22","fase":"3. Reta final TRT4","m":"Língua Portuguesa","f":"Interpretação, reescrita, concordância, regência, crase e pontuação","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-23-0","d":"2027-01-23","fase":"3. Reta final TRT4","m":"Direito Processual do Trabalho","f":"TRT4: execução, recursos, súmulas, OJs, Protocolos para atuação e julgamento e Lei nº 11.419/2006 (programa do Técnico)","a":"Revisão dirigida + questões","g":"","h":4,"q":30},{"k":"2027-01-24-0","d":"2027-01-24","fase":"3. Reta final TRT4","m":"Simulado + revisão","f":"Simulado 6: modelo TRT4 completo, à tarde, em 4h; revisar os erros","a":"Simulado + correção","g":"","h":6,"q":60},{"k":"2027-01-25-0","d":"2027-01-25","fase":"3. Reta final TRT4","m":"Direito do Trabalho","f":"TRT4: súmulas, OJs, precedentes e teses de repercussão geral","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-26-0","d":"2027-01-26","fase":"3. Reta final TRT4","m":"Direito Administrativo","f":"TRT4: atos, licitações, Lei nº 8.112/1990, LAI e LGPD; improbidade (cobrada apenas no programa do Técnico)","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-27-0","d":"2027-01-27","fase":"3. Reta final TRT4","m":"Direito Constitucional","f":"TRT4: direitos fundamentais, Poder Judiciário e controle de constitucionalidade","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-28-0","d":"2027-01-28","fase":"3. Reta final TRT4","m":"Direito Processual Civil","f":"TRT4: tutela provisória, provas, sentença, recursos e execução","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-29-0","d":"2027-01-29","fase":"3. Reta final TRT4","m":"Língua Portuguesa","f":"Interpretação, reescrita, concordância, regência, crase e pontuação","a":"Revisão dirigida + questões","g":"","h":3,"q":25},{"k":"2027-01-30-0","d":"2027-01-30","fase":"3. Reta final TRT4","m":"Revisão leve","f":"Resumos, erros frequentes e conferência de documento e local de prova","a":"Revisão leve","g":"","h":1,"q":null},{"k":"2027-01-31-0","d":"2027-01-31","fase":"3. Reta final TRT4","m":"PROVA TRT4","f":"Analista Judiciário, Área Judiciária, à tarde (conferir horários no Edital de Convocação)","a":"Prova","g":"","h":0,"q":null}],"mat":{"2026-12-02":[["01 Lei seca CF","Direitos e deveres individuais e coletivos",4],["01 Lei seca CF","Direitos sociais, nacionalidade, direitos políticos e partidos",11]],"2026-12-16":[["01 Lei seca CF","Organização do Estado e intervenção",21],["01 Lei seca CF","Administração Pública e servidores públicos",34],["01 Lei seca CF","Processo legislativo e fiscalização",43],["01 Lei seca CF","Poder Executivo",51],["01 Lei seca CF","Poderes Executivo e Legislativo; processo legislativo",56],["01 Lei seca CF","Funções essenciais à Justiça",72],["06 Direito Civil","CC: posse e direitos reais",147],["06 Direito Civil","MP nº 2.220/2001: concessão de uso especial para fins de moradia",200]],"2027-01-07":[["01 Lei seca CF","Princípios fundamentais",78],["01 Lei seca CF","Controle de constitucionalidade; aplicabilidade e interpretação das normas",81]],"2026-11-23":[["02 CLT · Direito do Trabalho","Duração do trabalho",4],["03 Leis trabalhistas","Lei nº 605/1949: repouso semanal remunerado",3],["12 Súmulas e OJs · DT","Duração do trabalho",3]],"2026-11-30":[["02 CLT · Direito do Trabalho","Rescisão; justas causas",10],["03 Leis trabalhistas","Lei nº 12.506/2011: aviso prévio proporcional",7],["12 Súmulas e OJs · DT","Rescisão; justas causas",15]],"2026-12-07":[["02 CLT · Direito do Trabalho","Contrato individual; trabalho intermitente",17],["02 CLT · Direito do Trabalho","Relação de trabalho e de emprego; empregado e empregador",25],["03 Leis trabalhistas","Lei nº 6.019/1974: trabalho temporário e terceirização",8],["03 Leis trabalhistas","LC nº 150/2015: trabalho doméstico",14],["03 Leis trabalhistas","Lei nº 5.889/1973: trabalho rural",25],["12 Súmulas e OJs · DT","Contrato individual; trabalho intermitente",24],["12 Súmulas e OJs · DT","Relação de trabalho e de emprego; empregado e empregador",28]],"2026-12-14":[["02 CLT · Direito do Trabalho","Salário mínimo e férias",29],["02 CLT · Direito do Trabalho","Salário e remuneração; 13º salário",35],["02 CLT · Direito do Trabalho","Segurança e medicina do trabalho; proteção à mulher, gestante e menor",39],["02 CLT · Direito do Trabalho","Segurança e medicina do trabalho e dano extrapatrimonial",42],["02 CLT · Direito do Trabalho","Proteção do trabalho da mulher e do menor",48],["03 Leis trabalhistas","Lei nº 4.749/1965: 13º salário",30],["03 Leis trabalhistas","Lei nº 14.611/2023: igualdade salarial",32],["03 Leis trabalhistas","Lei nº 14.442/2022: auxílio-alimentação e teletrabalho",35],["06 Direito Civil","CC: atos unilaterais, títulos de crédito e responsabilidade civil",98],["12 Súmulas e OJs · DT","Súmulas Vinculantes do STF",33],["12 Súmulas e OJs · DT","Salário e remuneração; 13º salário",34],["12 Súmulas e OJs · DT","Segurança e medicina do trabalho; proteção à mulher, gestante e menor",44]],"2026-12-21":[["02 CLT · Direito do Trabalho","FGTS; prescrição e decadência",60],["03 Leis trabalhistas","Lei nº 8.036/1990: FGTS",39],["12 Súmulas e OJs · DT","FGTS; prescrição e decadência",48]],"2026-12-28":[["02 CLT · Direito do Trabalho","Princípios e fontes; direitos constitucionais dos trabalhadores (art. 7º da CF)",64],["12 Súmulas e OJs · DT","Princípios e fontes; direitos constitucionais dos trabalhadores (art. 7º da CF)",54]],"2027-01-04":[["02 CLT · Direito do Trabalho","Direito coletivo; súmulas, OJs e repercussão geral",66],["03 Leis trabalhistas","Convenção nº 87 da OIT: liberdade sindical",57],["03 Leis trabalhistas","Lei nº 7.783/1989: greve",62],["12 Súmulas e OJs · DT","Direito coletivo; súmulas, OJs e repercussão geral",55]],"2026-11-24":[["04 CLT · Processo do Trabalho","Sentença e coisa julgada; liquidação",4],["13 Súmulas e OJs · DPT","Sentença e coisa julgada; liquidação",3]],"2026-12-01":[["04 CLT · Processo do Trabalho","Execução; IDPJ",15],["04 CLT · Processo do Trabalho","Lei nº 8.009/1990: impenhorabilidade do bem de família",21],["13 Súmulas e OJs · DPT","Execução; IDPJ",15]],"2026-12-08":[["04 CLT · Processo do Trabalho","Organização da Justiça do Trabalho",24],["04 CLT · Processo do Trabalho","Partes e procuradores; jus postulandi",39],["05 Processo Civil","CPC: sujeitos do processo",49],["13 Súmulas e OJs · DPT","Súmulas Vinculantes do STF",22],["13 Súmulas e OJs · DPT","Organização e competência da Justiça do Trabalho; serviços auxiliares",23],["13 Súmulas e OJs · DPT","Partes e procuradores; jus postulandi",27]],"2026-12-15":[["04 CLT · Processo do Trabalho","Princípios; aplicação subsidiária do CPC",43],["04 CLT · Processo do Trabalho","Nulidades e exceções; audiências",50],["06 Direito Civil","CC: direito de empresa",113],["13 Súmulas e OJs · DPT","Princípios; aplicação subsidiária do CPC",32],["13 Súmulas e OJs · DPT","Nulidades e exceções; audiências",36]],"2026-12-22":[["04 CLT · Processo do Trabalho","Provas; dissídios individuais",59],["13 Súmulas e OJs · DPT","Provas; dissídios individuais",39]],"2026-12-29":[["04 CLT · Processo do Trabalho","Procedimentos especiais; ação civil pública",65],["04 CLT · Processo do Trabalho","Dissídios coletivos",69],["13 Súmulas e OJs · DPT","Procedimentos especiais; ação civil pública",44]],"2027-01-05":[["04 CLT · Processo do Trabalho","Prescrição",74],["04 CLT · Processo do Trabalho","Prescrição intercorrente; PJe",78],["13 Súmulas e OJs · DPT","Prescrição intercorrente; PJe",64]],"2026-12-03":[["05 Processo Civil","CPC: normas fundamentais, jurisdição e competência",4],["05 Processo Civil","CPC: atos processuais, tutela provisória e formação, suspensão e extinção do processo",15],["05 Processo Civil","Jurisdição e ação; competência",40]],"2026-12-17":[["05 Processo Civil","Julgamento conforme o estado do processo; provas",77],["05 Processo Civil","Liquidação e cumprimento de sentença; execução",125],["05 Processo Civil","CPC: cumprimento de sentença",127],["05 Processo Civil","CPC: procedimentos especiais do programa",138],["05 Processo Civil","CPC: processo de execução",146],["05 Processo Civil","Lei nº 12.016/2009: mandado de segurança",181],["05 Processo Civil","Lei nº 7.347/1985: ação civil pública",188],["05 Processo Civil","Lei nº 9.099/1995: Juizados Especiais Cíveis e Criminais",193],["05 Processo Civil","Lei nº 13.140/2015: mediação",209],["06 Direito Civil","CC: direito de família",205]],"2027-01-14":[["05 Processo Civil","TRT8",219],["05 Processo Civil","Lei nº 11.419/2006: processo eletrônico",233]],"2026-11-28":[["06 Direito Civil","CC: pessoas naturais e jurídicas e domicílio",4],["06 Direito Civil","CC: bens, negócio jurídico, prescrição e prova",17]],"2026-12-12":[["06 Direito Civil","CC: direito das obrigações",36],["06 Direito Civil","CC: contratos em geral",55],["06 Direito Civil","CC: contratos em espécie",63]],"2026-12-18":[["06 Direito Civil","CC: direito das sucessões",241],["06 Direito Civil","CPC: inventário e partilha, arrolamento e alvarás",270]],"2026-11-26":[["07 Direito Administrativo","Lei nº 11.416/2006: carreiras do Judiciário da União",4],["08 Lei nº 8.112/1990","Provimento, vacância, remoção, redistribuição e substituição",3],["08 Lei nº 8.112/1990","Vencimento, remuneração e vantagens",14],["08 Lei nº 8.112/1990","Férias, licenças, afastamentos, concessões, tempo de serviço e direito de petição",23],["08 Lei nº 8.112/1990","Regime disciplinar",34],["08 Lei nº 8.112/1990","Processo administrativo disciplinar",43],["08 Lei nº 8.112/1990","Seguridade social do servidor",51],["08 Lei nº 8.112/1990","Disposições gerais, transitórias e finais",62],["09 Legislação do TRT8","Regimento Interno do TRT8",3],["09 Legislação do TRT8","Código de Ética dos servidores do TRT8 (Res. TRT8 nº 88/2012)",84]],"2026-12-05":[["07 Direito Administrativo","Decreto-Lei nº 4.657/1942: LINDB",13],["07 Direito Administrativo","Lei nº 13.869/2019: abuso de autoridade",20],["07 Direito Administrativo","Lei nº 9.784/1999: processo administrativo federal",29],["07 Direito Administrativo","Lei nº 14.133/2021: licitações e contratos",44]],"2026-12-19":[["07 Direito Administrativo","Lei nº 8.429/1992: improbidade administrativa",129],["07 Direito Administrativo","Lei nº 14.230/2021: reforma da Lei de Improbidade",146],["07 Direito Administrativo","Lei nº 8.987/1995: concessões e permissões",148],["07 Direito Administrativo","Lei nº 11.079/2004: parcerias público-privadas",162],["07 Direito Administrativo","Lei nº 13.019/2014: parcerias com o terceiro setor (MROSC)",176]],"2027-01-02":[["07 Direito Administrativo","Lei nº 12.527/2011: acesso à informação",204],["07 Direito Administrativo","Lei nº 13.709/2018: proteção de dados pessoais (LGPD)",219]],"2026-12-10":[["09 Legislação do TRT8","Res. CNJ nº 400/2021: política de sustentabilidade no Poder Judiciário",93],["09 Legislação do TRT8","Res. TRT8 nº 67/2021: assédio e discriminação no TRT8",104],["09 Legislação do TRT8","Res. CNJ nº 351/2020: assédio e discriminação no Poder Judiciário",112],["09 Legislação do TRT8","Res. CSJT nº 360/2023: violência, assédio e discriminação na Justiça do Trabalho",124],["09 Legislação do TRT8","Res. CNJ nº 492/2023: perspectiva de gênero",134],["09 Legislação do TRT8","Res. CSJT nº 368/2023: equidade de raça, gênero e diversidade",137]],"2027-01-12":[["10 Pessoas com deficiência","Lei nº 13.146/2015: Estatuto da Pessoa com Deficiência",3],["10 Pessoas com deficiência","Lei nº 11.126/2005: cão-guia",37],["10 Pessoas com deficiência","Lei nº 10.098/2000: acessibilidade",39],["10 Pessoas com deficiência","Lei nº 10.048/2000: prioridade de atendimento",45],["10 Pessoas com deficiência","Decreto nº 5.296/2004: regulamento das Leis nº 10.048 e 10.098",48],["10 Pessoas com deficiência","Lei nº 8.160/1991: símbolo de surdez",67],["10 Pessoas com deficiência","Lei nº 7.853/1989: apoio e integração social",69],["10 Pessoas com deficiência","Decreto nº 3.298/1999: regulamento da Lei nº 7.853",74],["10 Pessoas com deficiência","Res. CSJT nº 386/2024, art. 6º: acessibilidade e inclusão na Justiça do Trabalho",86]],"2026-12-30":[["11 Direitos Humanos e tratados","Declaração Universal dos Direitos Humanos (1948)",3],["11 Direitos Humanos e tratados","PIDCP: Pacto Internacional sobre Direitos Civis e Políticos (Decreto nº 592/1992)",9],["11 Direitos Humanos e tratados","PIDESC: Pacto Internacional sobre Direitos Econômicos, Sociais e Culturais (Decreto nº 591/1992)",25],["11 Direitos Humanos e tratados","Decreto nº 4.388/2002: promulgação do Estatuto de Roma",34],["11 Direitos Humanos e tratados","Estatuto de Roma do Tribunal Penal Internacional",35],["11 Direitos Humanos e tratados","Decreto nº 19.841/1945: promulgação da Carta da ONU",94],["11 Direitos Humanos e tratados","Carta das Nações Unidas",95],["11 Direitos Humanos e tratados","Estatuto da Corte Internacional de Justiça",116]],"2026-11-29":[["14 Caderno de Revisão","Revisão de 29/11 (23 a 28/11)",3],["15 Estudo de Caso","Questões reais R1 e R2",8]],"2026-12-13":[["14 Caderno de Revisão","Revisão de 13/12 (30/11 a 12/12)",22],["15 Estudo de Caso","Casos 1 e 4",14]],"2026-12-20":[["15 Estudo de Caso","Caso 2, dentro do Simulado 3",16]],"2026-12-27":[["14 Caderno de Revisão","Revisão de 27/12 (14 a 26/12)",53],["15 Estudo de Caso","Caso 3, 5 ou 7",18]],"2027-01-03":[["15 Estudo de Caso","Questão real R3 e um caso ainda não feito",12]],"2027-01-10":[["15 Estudo de Caso","Caso 8, dentro do Simulado 5",28]],"2027-01-16":[["14 Caderno de Revisão","Revisão leve antes da prova do TRT8",92]]},"mats":[{"n":"01","file":"01_Lei_Seca_Constituicao_Federal.pdf","pages":88,"toc":[["02/12 · Direitos e deveres individuais e coletivos",4],["02/12 · Direitos sociais, nacionalidade, direitos políticos e partidos",11],["16/12 · Organização do Estado e intervenção",21],["16/12 · Administração Pública e servidores públicos",34],["16/12 · Processo legislativo e fiscalização",43],["16/12 · Poder Executivo",51],["16/12 · Poderes Executivo e Legislativo; processo legislativo",56],["16/12 · Funções essenciais à Justiça",72],["07/01 · Princípios fundamentais",78],["07/01 · Controle de constitucionalidade; aplicabilidade e interpretação das normas",81],["Gabarito comentado",85],["Fontes e pendências",88]],"size":2669267,"name":"Lei seca · Constituição Federal"},{"n":"02","file":"02_Lei_Seca_CLT_Direito_do_Trabalho.pdf","pages":79,"toc":[["23/11 · Duração do trabalho",4],["30/11 · Rescisão; justas causas",10],["07/12 · Contrato individual; trabalho intermitente",17],["07/12 · Relação de trabalho e de emprego; empregado e empregador",25],["14/12 · Salário mínimo e férias",29],["14/12 · Salário e remuneração; 13º salário",35],["14/12 · Segurança e medicina do trabalho; proteção à mulher, gestante e menor",39],["14/12 · Segurança e medicina do trabalho e dano extrapatrimonial",42],["14/12 · Proteção do trabalho da mulher e do menor",48],["21/12 · FGTS; prescrição e decadência",60],["28/12 · Princípios e fontes; direitos constitucionais dos trabalhadores (art. 7º da CF)",64],["04/01 · Direito coletivo; súmulas, OJs e repercussão geral",66],["Gabarito comentado",76],["Fontes e pendências",79]],"size":3145952,"name":"Lei seca · CLT, Direito do Trabalho"},{"n":"03","file":"03_Lei_Seca_Leis_Trabalhistas.pdf","pages":68,"toc":[["23/11 · Lei nº 605/1949: repouso semanal remunerado",3],["30/11 · Lei nº 12.506/2011: aviso prévio proporcional",7],["07/12 · Lei nº 6.019/1974: trabalho temporário e terceirização",8],["07/12 · LC nº 150/2015: trabalho doméstico",14],["07/12 · Lei nº 5.889/1973: trabalho rural",25],["14/12 · Lei nº 4.749/1965: 13º salário",30],["14/12 · Lei nº 14.611/2023: igualdade salarial",32],["14/12 · Lei nº 14.442/2022: auxílio-alimentação e teletrabalho",35],["21/12 · Lei nº 8.036/1990: FGTS",39],["04/01 · Convenção nº 87 da OIT: liberdade sindical",57],["04/01 · Lei nº 7.783/1989: greve",62],["Gabarito comentado",66],["Fontes e pendências",68]],"size":2703350,"name":"Lei seca · Leis trabalhistas"},{"n":"04","file":"04_Lei_Seca_CLT_Processo_do_Trabalho.pdf","pages":86,"toc":[["24/11 · Sentença e coisa julgada; liquidação",4],["01/12 · Execução; IDPJ",15],["01/12 · Lei nº 8.009/1990: impenhorabilidade do bem de família",21],["08/12 · Organização da Justiça do Trabalho",24],["08/12 · Partes e procuradores; jus postulandi",39],["15/12 · Princípios; aplicação subsidiária do CPC",43],["15/12 · Nulidades e exceções; audiências",50],["22/12 · Provas; dissídios individuais",59],["29/12 · Procedimentos especiais; ação civil pública",65],["29/12 · Dissídios coletivos",69],["05/01 · Prescrição",74],["05/01 · Prescrição intercorrente; PJe",78],["Gabarito comentado",82],["Fontes e pendências",86]],"size":2755095,"name":"Lei seca · CLT, Processo do Trabalho"},{"n":"05","file":"05_Lei_Seca_Direito_Processual_Civil.pdf","pages":241,"toc":[["03/12 · CPC: normas fundamentais, jurisdição e competência",4],["03/12 · CPC: atos processuais, tutela provisória e formação, suspensão e extinção do processo",15],["03/12 · Jurisdição e ação; competência",40],["08/12 · CPC: sujeitos do processo",49],["17/12 · Julgamento conforme o estado do processo; provas",77],["17/12 · Liquidação e cumprimento de sentença; execução",125],["17/12 · CPC: cumprimento de sentença",127],["17/12 · CPC: procedimentos especiais do programa",138],["17/12 · CPC: processo de execução",146],["17/12 · Lei nº 12.016/2009: mandado de segurança",181],["17/12 · Lei nº 7.347/1985: ação civil pública",188],["17/12 · Lei nº 9.099/1995: Juizados Especiais Cíveis e Criminais",193],["17/12 · Lei nº 13.140/2015: mediação",209],["14/01 · TRT8",219],["14/01 · Lei nº 11.419/2006: processo eletrônico",233],["Gabarito comentado",239],["Fontes e pendências",241]],"size":7353642,"name":"Lei seca · Processo Civil"},{"n":"06","file":"06_Lei_Seca_Direito_Civil.pdf","pages":284,"toc":[["28/11 · CC: pessoas naturais e jurídicas e domicílio",4],["28/11 · CC: bens, negócio jurídico, prescrição e prova",17],["12/12 · CC: direito das obrigações",36],["12/12 · CC: contratos em geral",55],["12/12 · CC: contratos em espécie",63],["14/12 · CC: atos unilaterais, títulos de crédito e responsabilidade civil",98],["15/12 · CC: direito de empresa",113],["16/12 · CC: posse e direitos reais",147],["16/12 · MP nº 2.220/2001: concessão de uso especial para fins de moradia",200],["17/12 · CC: direito de família",205],["18/12 · CC: direito das sucessões",241],["18/12 · CPC: inventário e partilha, arrolamento e alvarás",270],["Gabarito comentado",282],["Fontes e pendências",284]],"size":9716881,"name":"Lei seca · Direito Civil"},{"n":"07","file":"07_Lei_Seca_Direito_Administrativo.pdf","pages":247,"toc":[["26/11 · Lei nº 11.416/2006: carreiras do Judiciário da União",4],["05/12 · Decreto-Lei nº 4.657/1942: LINDB",13],["05/12 · Lei nº 13.869/2019: abuso de autoridade",20],["05/12 · Lei nº 9.784/1999: processo administrativo federal",29],["05/12 · Lei nº 14.133/2021: licitações e contratos",44],["19/12 · Lei nº 8.429/1992: improbidade administrativa",129],["19/12 · Lei nº 14.230/2021: reforma da Lei de Improbidade",146],["19/12 · Lei nº 8.987/1995: concessões e permissões",148],["19/12 · Lei nº 11.079/2004: parcerias público-privadas",162],["19/12 · Lei nº 13.019/2014: parcerias com o terceiro setor (MROSC)",176],["02/01 · Lei nº 12.527/2011: acesso à informação",204],["02/01 · Lei nº 13.709/2018: proteção de dados pessoais (LGPD)",219],["Gabarito comentado",245],["Fontes e pendências",247]],"size":7121178,"name":"Lei seca · Direito Administrativo"},{"n":"08","file":"08_Lei_Seca_Lei_8112.pdf","pages":67,"toc":[["26/11 · Provimento, vacância, remoção, redistribuição e substituição",3],["26/11 · Vencimento, remuneração e vantagens",14],["26/11 · Férias, licenças, afastamentos, concessões, tempo de serviço e direito de petição",23],["26/11 · Regime disciplinar",34],["26/11 · Processo administrativo disciplinar",43],["26/11 · Seguridade social do servidor",51],["26/11 · Disposições gerais, transitórias e finais",62],["Gabarito comentado",65],["Fontes e pendências",67]],"size":2239037,"name":"Lei seca · Lei nº 8.112/1990"},{"n":"09","file":"09_Lei_Seca_Legislacao_TRT8.pdf","pages":147,"toc":[["26/11 · Regimento Interno do TRT8",3],["26/11 · Código de Ética dos servidores do TRT8 (Res. TRT8 nº 88/2012)",84],["10/12 · Res. CNJ nº 400/2021: política de sustentabilidade no Poder Judiciário",93],["10/12 · Res. TRT8 nº 67/2021: assédio e discriminação no TRT8",104],["10/12 · Res. CNJ nº 351/2020: assédio e discriminação no Poder Judiciário",112],["10/12 · Res. CSJT nº 360/2023: violência, assédio e discriminação na Justiça do Trabalho",124],["10/12 · Res. CNJ nº 492/2023: perspectiva de gênero",134],["10/12 · Res. CSJT nº 368/2023: equidade de raça, gênero e diversidade",137],["Gabarito comentado",145],["Fontes e pendências",147]],"size":4020833,"name":"Lei seca · Legislação do TRT8"},{"n":"10","file":"10_Lei_Seca_Pessoas_com_Deficiencia.pdf","pages":91,"toc":[["12/01 · Lei nº 13.146/2015: Estatuto da Pessoa com Deficiência",3],["12/01 · Lei nº 11.126/2005: cão-guia",37],["12/01 · Lei nº 10.098/2000: acessibilidade",39],["12/01 · Lei nº 10.048/2000: prioridade de atendimento",45],["12/01 · Decreto nº 5.296/2004: regulamento das Leis nº 10.048 e 10.098",48],["12/01 · Lei nº 8.160/1991: símbolo de surdez",67],["12/01 · Lei nº 7.853/1989: apoio e integração social",69],["12/01 · Decreto nº 3.298/1999: regulamento da Lei nº 7.853",74],["12/01 · Res. CSJT nº 386/2024, art. 6º: acessibilidade e inclusão na Justiça do Trabalho",86],["Gabarito comentado",89],["Fontes e pendências",91]],"size":2689330,"name":"Lei seca · Pessoas com deficiência"},{"n":"11","file":"11_Lei_Seca_Direitos_Humanos_e_Tratados.pdf","pages":130,"toc":[["30/12 · Declaração Universal dos Direitos Humanos (1948)",3],["30/12 · PIDCP: Pacto Internacional sobre Direitos Civis e Políticos (Decreto nº 592/1992)",9],["30/12 · PIDESC: Pacto Internacional sobre Direitos Econômicos, Sociais e Culturais (Decreto nº 591/1992)",25],["30/12 · Decreto nº 4.388/2002: promulgação do Estatuto de Roma",34],["30/12 · Estatuto de Roma do Tribunal Penal Internacional",35],["30/12 · Decreto nº 19.841/1945: promulgação da Carta da ONU",94],["30/12 · Carta das Nações Unidas",95],["30/12 · Estatuto da Corte Internacional de Justiça",116],["Gabarito comentado",128],["Fontes e pendências",130]],"size":3435948,"name":"Lei seca · Direitos Humanos e tratados"},{"n":"12","file":"12_Sumulas_OJs_TST_Direito_do_Trabalho.pdf","pages":62,"toc":[["23/11 · Duração do trabalho",3],["30/11 · Rescisão; justas causas",15],["07/12 · Contrato individual; trabalho intermitente",24],["07/12 · Relação de trabalho e de emprego; empregado e empregador",28],["14/12 · Súmulas Vinculantes do STF",33],["14/12 · Salário e remuneração; 13º salário",34],["14/12 · Segurança e medicina do trabalho; proteção à mulher, gestante e menor",44],["21/12 · FGTS; prescrição e decadência",48],["28/12 · Princípios e fontes; direitos constitucionais dos trabalhadores (art. 7º da CF)",54],["04/01 · Direito coletivo; súmulas, OJs e repercussão geral",55],["Gabarito comentado",61],["Fontes e pendências",62]],"size":2235863,"name":"Súmulas e OJs do TST · Direito do Trabalho"},{"n":"13","file":"13_Sumulas_OJs_TST_Processo_do_Trabalho.pdf","pages":67,"toc":[["24/11 · Sentença e coisa julgada; liquidação",3],["01/12 · Execução; IDPJ",15],["08/12 · Súmulas Vinculantes do STF",22],["08/12 · Organização e competência da Justiça do Trabalho; serviços auxiliares",23],["08/12 · Partes e procuradores; jus postulandi",27],["15/12 · Princípios; aplicação subsidiária do CPC",32],["15/12 · Nulidades e exceções; audiências",36],["22/12 · Provas; dissídios individuais",39],["29/12 · Procedimentos especiais; ação civil pública",44],["05/01 · Prescrição intercorrente; PJe",64],["Gabarito comentado",65],["Fontes e pendências",67]],"size":2174027,"name":"Súmulas e OJs do TST · Processo do Trabalho"},{"n":"14","file":"14_Caderno_de_Revisao_TRT8.pdf","pages":117,"toc":[["Revisão de domingo, 29/11",3],["Revisão semanal de domingo, 13/12",22],["Revisão semanal de domingo, 27/12",53],["Revisão leve antes da prova do TRT8, 16/01",92],["Pegadinhas de todo o material (16/01)",111]],"size":3972551,"name":"Caderno de Revisão"},{"n":"15","file":"15_Estudo_de_Caso_TRT8.pdf","pages":30,"toc":[["Como a prova funciona no TRT8",4],["O que as provas da FCC de 2025 mostram",5],["Como escrever a resposta",6],["Plano de treino no cronograma",7],["R1 · TRT1 2025 · intervalo intrajornada",8],["R2 · TRT15 2025 · recurso adesivo",10],["R3 · TRT15 2025 · ação popular",12],["Caso 1 · Estabilidade da gestante",14],["Caso 2 · Terceirização, grupo econômico e responsabilidade",16],["Caso 3 · Equiparação salarial",18],["Caso 4 · Execução: desconsideração da personalidade jurídica e bem de família",20],["Caso 5 · Audiência: ausências, revelia e preposto",22],["Caso 6 · Recursos: custas, depósito recursal e deserção",24],["Caso 7 · Prescrição e FGTS",26],["Caso 8 · Greve em serviço essencial",28],["Fontes",30]],"size":606330,"name":"Estudo de Caso"}]};
+const ROWS = DATA.rows, MAT = DATA.mat;
+const DIAS = ["domingo","segunda","terça","quarta","quinta","sexta","sábado"];
+const MATERIAS = ["Direito do Trabalho","Direito Processual do Trabalho","Direito Constitucional","Direito Administrativo","Língua Portuguesa","Direito Processual Civil","Raciocínio Lógico e Matemática","Legislação e Direitos Humanos","Direito Civil","Informática"];
+const CAUSAS = ["Não sabia","Confundi institutos","Literalidade da lei","Leitura do enunciado","Tempo","Chute certo"];
+const SIMS = [
+  {id:"s1",d:"2026-11-29",n:"Simulado 1",fmt:"Modelo TRT8, sem discursiva",G:20,E:40,disc:false},
+  {id:"s2",d:"2026-12-06",n:"Simulado 2",fmt:"Prova do TRT4 de 2022, sem redação",G:30,E:30,disc:false},
+  {id:"s3",d:"2026-12-20",n:"Simulado 3",fmt:"Modelo TRT8 com estudo de caso",G:20,E:40,disc:true},
+  {id:"s4",d:"2027-01-03",n:"Simulado 4",fmt:"Modelo TRT8 completo, 4h30",G:20,E:40,disc:true},
+  {id:"s5",d:"2027-01-10",n:"Simulado 5",fmt:"Modelo TRT8 com estudo de caso",G:20,E:40,disc:true},
+  {id:"s6",d:"2027-01-24",n:"Simulado 6",fmt:"Modelo TRT4 completo, 4h",G:30,E:30,disc:true}];
+const NONSTUDY = new Set(["Folga","PROVA TRT8","PROVA TRT4","Pós-prova"]);
+
+const pad = n => String(n).padStart(2,"0");
+const iso = dt => dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());
+const parse = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const br = s => s.slice(8,10)+"/"+s.slice(5,7);
+const wd = s => DIAS[parse(s).getDay()];
+const TODAY = iso(new Date());
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = v => { const x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : 0; };
+const fmt1 = x => (Math.round(x*10)/10).toLocaleString("pt-BR");
+const pct = (a,b) => b>0 ? Math.round(100*a/b)+"%" : "–";
+
+let LOG = {}, SIM = {}, ERR = [], db = null, canWrite = false;
+const timers = {};
+
+function setStatus(msg, kind){ const el=document.getElementById("status"); if(!msg){el.hidden=true;return;} el.hidden=false; el.className="banner"+(kind?" "+kind:""); el.textContent=msg; }
+
+function countdown(){
+  const t=parse(TODAY);
+  const d8=Math.round((parse("2027-01-17")-t)/864e5), d4=Math.round((parse("2027-01-31")-t)/864e5);
+  document.getElementById("dTRT8").textContent = d8>0 ? d8+" dias" : (d8===0?"hoje":"feita");
+  document.getElementById("dTRT4").textContent = d4>0 ? d4+" dias" : (d4===0?"hoje":"feita");
+}
+
+function isStudy(r){ return r.h>0 && !NONSTUDY.has(r.m); }
+function stateOf(r){
+  const l=LOG[r.k]||{};
+  if(l.status==="feito") return ["feito","Feito"];
+  if(l.status==="parcial") return ["parcial","Parcial"];
+  if(r.d===TODAY) return ["hoje","Hoje"];
+  if(r.d<TODAY && isStudy(r)) return ["atraso", l.status==="nao"?"Não feito":"Pendente"];
+  return ["futuro", r.d<TODAY?"–":"Previsto"];
+}
+
+function matsHtml(d){
+  const list=MAT[d]||[]; if(!list.length) return "";
+  return `<div><h3>Ler nos materiais · toque para abrir</h3><div class="mats">${list.map(([f,t,p])=>`<button type="button" class="mtag" data-open="${esc(f.slice(0,2))}" data-page="${p||1}" title="Abrir na página ${p||1}"><b>${esc(f.slice(0,2))}</b> ${esc(f.slice(3))} · ${esc(t)} · <b>p. ${p||1}</b></button>`).join("")}</div></div>`;
+}
+
+function logHtml(r){
+  const l=LOG[r.k]||{}, dis=canWrite?"":"disabled";
+  if(!isStudy(r) && !r.m.startsWith("Simulado") && !r.m.startsWith("Revisão")) return "";
+  const b=(v,t)=>`<button type="button" data-v="${v}" aria-pressed="${l.status===v}" ${dis}>${t}</button>`;
+  return `<div class="log" data-k="${r.k}">
+    <div class="seg" role="group" aria-label="Situação">${b("feito","Feito")}${b("parcial","Parcial")}${b("nao","Não fiz")}</div>
+    <label class="f">Horas feitas<input id="h-${r.k}" type="number" min="0" step="0.25" inputmode="decimal" data-f="horas" value="${l.horas??""}" placeholder="${r.h}" ${dis}></label>
+    <label class="f">Questões<input id="q-${r.k}" type="number" min="0" step="1" inputmode="numeric" data-f="questoes" value="${l.questoes??""}" placeholder="${r.q??""}" ${dis}></label>
+    <label class="f">Acertos<input id="a-${r.k}" type="number" min="0" step="1" inputmode="numeric" data-f="acertos" value="${l.acertos??""}" ${dis}></label>
+    <label class="f obs">Observações e erros para o caderno<textarea id="o-${r.k}" rows="1" data-f="obs" ${dis}>${esc(l.obs||"")}</textarea></label>
+  </div><div class="saved" id="sv-${r.k}"></div>`;
+}
+
+function itemHtml(r){
+  const [st,lab]=stateOf(r);
+  return `<div class="item">
+    <div class="mrow"><div class="mat">${esc(r.m)}</div><span class="pill p-${st}">${lab}</span></div>
+    <div class="focus">${esc(r.f)}</div>
+    <div class="meta">${esc(r.a)}${r.h?` · ${fmt1(r.h)} h previstas`:""}${r.q?` · meta de ${r.q} questões`:""}</div>
+    ${r.g?`<div class="guia"><b>Guia do Aprovado:</b> ${esc(r.g)}</div>`:""}
+    ${logHtml(r)}
+  </div>`;
+}
+
+function dayCard(d, title){
+  const rs=ROWS.filter(r=>r.d===d);
+  if(!rs.length) return "";
+  return `<div class="day"><div class="dayhead"><span class="date">${title||""} ${br(d)} · ${wd(d)}</span><span class="meta">${esc(rs[0].fase)}</span></div>${rs.map(itemHtml).join("")}<div class="item" style="border-top:1px solid var(--line)">${matsHtml(d)||'<span class="meta">Sem leitura de lei seca prevista para este dia.</span>'}</div></div>`;
+}
+
+function totals(filter){
+  let hp=0,hf=0,q=0,a=0,dp=0,df=0;
+  for(const r of ROWS){ if(filter && !filter(r)) continue; const l=LOG[r.k]||{};
+    if(isStudy(r)){ hp+=r.h; if(r.d<=TODAY){dp++; if(l.status==="feito") df++;} }
+    hf+=num(l.horas); q+=num(l.questoes); a+=num(l.acertos); }
+  return {hp,hf,q,a,dp,df};
+}
+
+function renderHoje(){
+  const el=document.getElementById("v-hoje");
+  const t=totals(); const hpAte=ROWS.filter(r=>isStudy(r)&&r.d<=TODAY).reduce((s,r)=>s+r.h,0);
+  const pend=ROWS.filter(r=>r.d<TODAY && isStudy(r) && (LOG[r.k]||{}).status!=="feito");
+  const yest=ROWS.filter(r=>r.d<TODAY && isStudy(r)).map(r=>r.d).pop();
+  const next=ROWS.find(r=>r.d>TODAY)?.d;
+  let todayHtml = ROWS.some(r=>r.d===TODAY) ? dayCard(TODAY,"Hoje,") : `<div class="empty">Não há estudo previsto para hoje no cronograma.</div>`;
+  el.innerHTML = `
+  <div class="kpis">
+    <div class="kpi"><div class="v">${t.df}/${t.dp}</div><div class="l">dias concluídos até hoje</div><div class="bar"><i style="width:${t.dp?100*t.df/t.dp:0}%"></i></div></div>
+    <div class="kpi"><div class="v">${fmt1(t.hf)} h</div><div class="l">feitas de ${fmt1(hpAte)} h previstas até hoje</div><div class="bar"><i style="width:${Math.min(100,hpAte?100*t.hf/hpAte:0)}%"></i></div></div>
+    <div class="kpi"><div class="v">${t.q}</div><div class="l">questões resolvidas</div></div>
+    <div class="kpi"><div class="v">${pct(t.a,t.q)}</div><div class="l">de acerto geral</div></div>
+  </div>
+  ${pend.length?`<div class="banner warn"><b>${pend.length} ${pend.length>1?"tópicos pendentes":"tópico pendente"}</b> de dias anteriores: ${pend.slice(0,4).map(r=>`${br(r.d)} ${esc(r.m)}`).join("; ")}${pend.length>4?"; …":""}. Use a hora de reserva dos dias úteis ou o domingo de revisão.</div>`:""}
+  <div>${todayHtml}</div>
+  ${yest?`<div><h2>Revisão de 24 horas</h2><p class="note">Primeiros 15 minutos do dia: reler as anotações de ${br(yest)}.</p>${dayCard(yest,"")}</div>`:""}
+  ${next?`<div><h2>Próximo dia de estudo</h2>${dayCard(next,"")}</div>`:""}`;
+}
+
+function weekKey(d){ const dt=parse(d); const off=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-off); return iso(dt); }
+let cronFilter="todas";
+function renderCrono(){
+  const el=document.getElementById("v-cronograma");
+  const rs=ROWS.filter(r=>cronFilter==="todas"||(cronFilter==="pendentes"?stateOf(r)[0]==="atraso":r.m===cronFilter));
+  const weeks={}; rs.forEach(r=>{(weeks[weekKey(r.d)]??=[]).push(r)});
+  const opts=["todas","pendentes",...MATERIAS].map(m=>`<option value="${esc(m)}" ${m===cronFilter?"selected":""}>${m==="todas"?"Todas as matérias":m==="pendentes"?"Só pendentes":esc(m)}</option>`).join("");
+  el.innerHTML = `<div class="filters"><h2 style="margin:0;flex:1">Cronograma</h2><label class="f" style="min-width:220px">Filtrar<select id="cronSel">${opts}</select></label></div>
+  ${Object.keys(weeks).length?"":`<div class="empty">Nenhum dia com esse filtro.</div>`}
+  ${Object.entries(weeks).map(([w,list])=>{
+    const end=parse(w); end.setDate(end.getDate()+6);
+    const hp=list.filter(isStudy).reduce((s,r)=>s+r.h,0), hf=list.reduce((s,r)=>s+num((LOG[r.k]||{}).horas),0);
+    return `<div class="week"><div class="wkhead"><h3 style="margin:0">Semana de ${br(w)} a ${br(iso(end))}</h3><span class="meta">${fmt1(hf)} de ${fmt1(hp)} h</span></div>
+    ${list.map(r=>{const [st,lab]=stateOf(r);
+      return `<details class="row${r.d===TODAY?" today":""}" ${r.d===TODAY?"open":""}><summary><span class="dd">${br(r.d)}<small>${wd(r.d)}</small></span><span class="t"><div class="mat">${esc(r.m)}</div><div class="focus">${esc(r.f)}</div></span><span class="pill p-${st}">${lab}</span></summary>
+      <div class="body"><div class="focus">${esc(r.f)}</div><div class="meta">${esc(r.a)}${r.h?` · ${fmt1(r.h)} h`:""}${r.q?` · ${r.q} questões`:""}</div>${r.g?`<div class="guia"><b>Guia do Aprovado:</b> ${esc(r.g)}</div>`:""}${matsHtml(r.d)}${logHtml(r)}</div></details>`}).join("")}</div>`}).join("")}`;
+  document.getElementById("cronSel").onchange=e=>{cronFilter=e.target.value; renderCrono();};
+}
+
+function accCell(a,q){ if(!q) return `<span class="meta">–</span>`; const p=a/q, c=p>=.75?"good":p>=.6?"mid":"low"; return `<div class="acc"><span class="n" style="font-family:var(--mono)">${Math.round(p*100)}%</span><div class="bar"><i class="${c}" style="width:${p*100}%"></i></div></div>`; }
+
+function renderDes(){
+  const el=document.getElementById("v-desempenho");
+  const rows=MATERIAS.map(m=>({m,...totals(r=>r.m===m)})).filter(x=>x.hp>0);
+  const errBy={}; ERR.forEach(e=>{ if(e.materia) errBy[e.materia]=(errBy[e.materia]||0)+(statusErr(e)==="Pendente"?1:0); });
+  // semanas
+  const weeks={}; ROWS.forEach(r=>{const l=LOG[r.k]||{}; const w=weekKey(r.d); const o=(weeks[w]??={q:0,a:0}); o.q+=num(l.questoes); o.a+=num(l.acertos);});
+  const wk=Object.entries(weeks).filter(([w])=>w<=TODAY);
+  const W=Math.max(320, wk.length*48), H=170, maxQ=Math.max(50,...wk.map(([,o])=>o.q)); const sc=v=>H-30-(v/maxQ)*(H-50);
+  const bars=wk.map(([w,o],i)=>{const x=36+i*44; return `<rect x="${x}" y="${sc(o.q)}" width="26" height="${H-30-sc(o.q)}" rx="3" fill="var(--accent)"></rect>
+    <text x="${x+13}" y="${H-14}" text-anchor="middle">${br(w)}</text>${o.q?`<text x="${x+13}" y="${sc(o.q)-5}" text-anchor="middle">${o.q} · ${pct(o.a,o.q)}</text>`:""}`}).join("");
+  el.innerHTML = `<h2>Desempenho por matéria</h2>
+  <div class="tablewrap"><table><thead><tr><th>Matéria</th><th class="n">Horas feitas / previstas</th><th class="n">Questões</th><th>Acerto</th><th class="n">Erros pendentes</th></tr></thead><tbody>
+  ${rows.map(x=>`<tr><td>${esc(x.m)}</td><td class="n">${fmt1(x.hf)} / ${fmt1(x.hp)}</td><td class="n">${x.q}</td><td>${accCell(x.a,x.q)}</td><td class="n">${errBy[x.m]||0}</td></tr>`).join("")}
+  </tbody></table></div>
+  <p class="note">Faixas de acerto: verde a partir de 75%, amarelo de 60% a 74%, vermelho abaixo de 60%. A nota mínima do edital é 6,00 em cada prova.</p>
+  <div><h2>Questões por semana</h2><div class="tablewrap" style="padding:8px">
+  ${wk.length?`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Questões resolvidas por semana">
+    <line x1="30" x2="${W-6}" y1="${H-30}" y2="${H-30}" stroke="var(--line)"></line>${bars}</svg>`:`<div class="empty">O gráfico aparece quando houver questões registradas.</div>`}
+  </div><p class="note">Cada coluna mostra as questões da semana (segunda a domingo) e o percentual de acerto.</p></div>`;
+}
+
+function notaObj(s,v){ if(v.ag===""||v.ag==null||v.ae===""||v.ae==null) return null; return (num(v.ag)/s.G*10 + 2*num(v.ae)/s.E*10)/3; }
+function renderSim(){
+  const el=document.getElementById("v-simulados"), dis=canWrite?"":"disabled";
+  el.innerHTML = `<h2>Simulados</h2>
+  <div class="tablewrap"><table><thead><tr><th>Data</th><th>Simulado</th><th class="n">Acertos gerais</th><th class="n">Acertos específicas</th><th class="n">Discursiva</th><th class="n">Nota objetiva</th><th>Situação</th></tr></thead><tbody>
+  ${SIMS.map(s=>{const v=SIM[s.id]||{}; const no=notaObj(s,v); const nd=s.disc&&v.disc!==""&&v.disc!=null?num(v.disc):null;
+    const ok = no==null?null:(no>=6 && (nd==null||nd>=6));
+    return `<tr data-s="${s.id}"><td class="n">${br(s.d)}</td><td><b>${s.n}</b><div class="meta">${esc(s.fmt)}</div></td>
+    <td class="n"><input id="ag-${s.id}" style="width:72px" type="number" min="0" max="${s.G}" data-f="ag" value="${v.ag??""}" ${dis}> <span class="meta">/ ${s.G}</span></td>
+    <td class="n"><input id="ae-${s.id}" style="width:72px" type="number" min="0" max="${s.E}" data-f="ae" value="${v.ae??""}" ${dis}> <span class="meta">/ ${s.E}</span></td>
+    <td class="n">${s.disc?`<input id="dc-${s.id}" style="width:72px" type="number" min="0" max="10" step="0.1" data-f="disc" value="${v.disc??""}" ${dis}>`:`<span class="meta">sem</span>`}</td>
+    <td class="n">${no==null?"–":no.toFixed(2).replace(".",",")}</td>
+    <td>${ok==null?`<span class="pill p-futuro">${s.d>TODAY?"Previsto":"Sem nota"}</span>`:ok?`<span class="pill p-feito">Dentro do mínimo</span>`:`<span class="pill p-atraso">Abaixo do mínimo</span>`}</td></tr>`}).join("")}
+  </tbody></table></div>
+  <p class="note">Nota objetiva = (nota de gerais + 2 × nota de específicas) ÷ 3, cada bloco de 0 a 10 (TRT8, item 11.2; TRT4, item 12.2). Mínimo de referência: 6,00 na objetiva e na discursiva.</p>`;
+  el.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{const id=inp.closest("tr").dataset.s; const v={...(SIM[id]||{})}; v[inp.dataset.f]=inp.value; SIM[id]=v; clearTimeout(timers["s"+id]); timers["s"+id]=setTimeout(()=>save("simulados",id,v,null),700);}));
+  el.querySelectorAll("input").forEach(inp=>inp.addEventListener("change",()=>renderSim()));
+}
+
+function statusErr(e){ return e.r1==="Sim"&&e.r2==="Sim"?"Resolvido":"Pendente"; }
+let errFilter="Pendente";
+function renderErr(){
+  const el=document.getElementById("v-erros"), dis=canWrite?"":"disabled";
+  const list=ERR.filter(e=>errFilter==="Todos"||statusErr(e)===errFilter).sort((a,b)=>(b.data||"").localeCompare(a.data||""));
+  const opt=(arr,sel)=>arr.map(x=>`<option ${x===sel?"selected":""}>${esc(x)}</option>`).join("");
+  el.innerHTML = `<h2>Caderno de erros</h2>
+  <form id="errForm" class="card formgrid">
+    <label class="f">Matéria<select id="e-mat" required ${dis}>${opt(MATERIAS)}</select></label>
+    <label class="f">Causa do erro<select id="e-causa" ${dis}>${opt(CAUSAS)}</select></label>
+    <label class="f">Tema<input id="e-tema" required placeholder="Ex.: competência territorial" ${dis}></label>
+    <label class="f">Questão (banca, órgão, ano, nº)<input id="e-q" placeholder="Ex.: FCC, TRT4, 2022, nº 41" ${dis}></label>
+    <label class="f wide">Regra correta e fundamento<textarea id="e-regra" required rows="2" placeholder="Ex.: art. 651, § 3º, da CLT; OJ 149 da SBDI-II" ${dis}></textarea></label>
+    <label class="f">Alerta no enunciado<input id="e-alerta" ${dis}></label>
+    <label class="f">Ver no material<input id="e-ver" placeholder="Ex.: 04 Processo do Trabalho, 08/12" ${dis}></label>
+    <div class="wide" style="display:flex;gap:10px;align-items:center"><button class="btn" type="submit" ${dis}>Registrar erro</button><span class="saved" id="e-msg"></span></div>
+  </form>
+  <div class="filters"><span class="meta" style="flex:1">${ERR.filter(e=>statusErr(e)==="Pendente").length} pendentes · ${ERR.length} registrados. Refaça a questão no domingo da semana (1ª revisão) e no domingo seguinte (2ª revisão).</span>
+    <label class="f">Mostrar<select id="errSel">${opt(["Pendente","Resolvido","Todos"],errFilter)}</select></label></div>
+  ${list.length?list.map(e=>`<div class="card err" data-id="${e.id}">
+    <div class="mrow"><span><b>${esc(e.materia)}</b> · ${esc(e.tema)}</span><span class="pill ${statusErr(e)==="Resolvido"?"p-feito":"p-atraso"}">${statusErr(e)}</span></div>
+    <div class="rule">${esc(e.regra)}</div>
+    <div class="bot"><span>${e.data?br(e.data):""}${e.questao?" · "+esc(e.questao):""}${e.causa?" · "+esc(e.causa):""}${e.alerta?" · alerta: "+esc(e.alerta):""}${e.ver?" · ver: "+esc(e.ver):""}</span>
+      <label>1ª revisão <select data-f="r1" ${dis}>${opt(["","Sim","Não"],e.r1||"")}</select></label>
+      <label>2ª revisão <select data-f="r2" ${dis}>${opt(["","Sim","Não"],e.r2||"")}</select></label>
+      <button type="button" class="btn ghost" data-del ${dis}>Excluir</button></div></div>`).join(""):`<div class="empty">${ERR.length?"Nenhum erro com esse filtro.":"Nenhum erro registrado ainda. Use o formulário acima depois de cada bateria de questões."}</div>`}`;
+  document.getElementById("errSel").onchange=e=>{errFilter=e.target.value; renderErr();};
+  document.getElementById("errForm").onsubmit=async ev=>{ev.preventDefault(); if(!canWrite) return;
+    const g=id=>document.getElementById(id).value.trim();
+    const doc={data:TODAY,materia:g("e-mat"),causa:g("e-causa"),tema:g("e-tema"),questao:g("e-q"),regra:g("e-regra"),alerta:g("e-alerta"),ver:g("e-ver"),r1:"",r2:""};
+    const msg=document.getElementById("e-msg");
+    try{ await db.collection("erros").add(doc); msg.textContent="Erro registrado."; ["e-tema","e-q","e-regra","e-alerta","e-ver"].forEach(i=>document.getElementById(i).value=""); }
+    catch(err){ msg.textContent = err&&err.code==="quota_exceeded" ? "O caderno atingiu o limite de registros. Exclua erros resolvidos para liberar espaço." : "Não foi possível registrar. Tente de novo em instantes."; }
+  };
+  el.querySelectorAll(".err select").forEach(s=>s.onchange=async()=>{const id=s.closest(".err").dataset.id; try{await db.doc("erros/"+id).update({[s.dataset.f]:s.value});}catch(e){setStatus("Não foi possível salvar a revisão. Tente de novo.","warn");}});
+  el.querySelectorAll("[data-del]").forEach(b=>{let armed=false; b.onclick=async()=>{ if(!armed){armed=true;b.textContent="Confirmar exclusão";setTimeout(()=>{armed=false;b.textContent="Excluir"},4000);return;} const id=b.closest(".err").dataset.id; try{await db.doc("erros/"+id).delete();}catch(e){setStatus("Não foi possível excluir. Tente de novo.","warn");} };});
+}
+
+async function save(col,id,data,svEl){
+  if(!db||!canWrite) return;
+  try{ await db.doc(col+"/"+id).set({...data, atualizado:new Date().toISOString()}); if(svEl) svEl.textContent="Salvo"; }
+  catch(e){ if(svEl) svEl.textContent="Não foi possível salvar. Confira a conexão e edite de novo."; if(e&&e.code==="invalid_argument"){canWrite=false; setStatus("Esta visualização só pode ler os registros.","warn");} }
+}
+
+// delegação para os registros diários
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".log .seg button"); if(!b||!canWrite) return;
+  const k=b.closest(".log").dataset.k; const v={...(LOG[k]||{})}; v.status = v.status===b.dataset.v ? "" : b.dataset.v;
+  if(v.status==="feito" && (v.horas===""||v.horas==null)){ const r=ROWS.find(x=>x.k===k); v.horas=String(r.h); }
+  LOG[k]=v; save("dias",k,v,document.getElementById("sv-"+k)); renderAll(true);
+});
+document.addEventListener("input",e=>{
+  const inp=e.target.closest(".log [data-f]"); if(!inp||!canWrite) return;
+  const k=inp.closest(".log").dataset.k; const v={...(LOG[k]||{})}; v[inp.dataset.f]=inp.value; LOG[k]=v;
+  const sv=document.getElementById("sv-"+k); if(sv) sv.textContent="Salvando…";
+  clearTimeout(timers[k]); timers[k]=setTimeout(()=>save("dias",k,v,document.getElementById("sv-"+k)),700);
+});
+const inLog=()=>{ const a=document.activeElement; return a&&a.matches&&a.matches(".log [data-f]"); };
+document.addEventListener("change",e=>{ if(e.target.closest(".log [data-f]")) setTimeout(()=>{ if(!inLog()) renderAll(true); },0); });
+document.addEventListener("focusout",e=>{ if(e.target.closest&&e.target.closest(".log [data-f]")) setTimeout(()=>{ if(!inLog()) renderAll(true); },0); });
+
+const MATS = DATA.mats;
+const lastPg = n => { try{ return parseInt(localStorage.getItem("pg-"+n))||0; }catch(_){ return 0; } };
+function renderMats(){
+  const el=document.getElementById("v-materiais");
+  el.innerHTML=`<h2>Materiais</h2><p class="note">Os materiais na última versão, com o sumário de cada um. No painel Hoje e no Cronograma, os materiais do dia abrem direto na parte certa.</p>
+  <div class="matlist">${MATS.map(m=>{const lp=lastPg(m.n); return `<div class="matcard"><div class="mrow"><span><b class="num">${m.n}</b><b>${esc(m.name)}</b></span><span class="meta">${m.pages} páginas · ${fmt1(m.size/1048576)} MB</span></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" data-open="${m.n}" data-page="1">Abrir</button>${lp>1?`<button type="button" class="btn ghost" data-open="${m.n}" data-page="${lp}">Continuar na página ${lp}</button>`:""}</div>
+  <details><summary>Sumário (${m.toc.length} partes)</summary><ul class="toc">${m.toc.map(([t,p])=>`<li><button type="button" data-open="${m.n}" data-page="${p}"><span>${esc(t)}</span><span class="pg">p. ${p}</span></button></li>`).join("")}</ul></details></div>`}).join("")}</div>`;
+}
+
+// leitor de PDF
+const V={doc:null,n:null,page:1,zoom:1,task:null,cache:{},busy:false,pending:null};
+let DL=null;
+function fail(text,err){
+  const msg=document.getElementById("vMsg"); document.getElementById("vCanvas").hidden=true; msg.hidden=false;
+  const det=err?(err.name||"Erro")+": "+(err.message||String(err)):"";
+  if(err) console.error("[Painel TRT8]",err);
+  msg.innerHTML=`<p>${esc(text)}</p>${det?`<p class="meta">Detalhe técnico: ${esc(det)}</p>`:""}`;
+}
+function pdfReady(){ if(window.pdfjsLib && !pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc="lib/pdf.worker.min.js"; return !!window.pdfjsLib; }
+async function openMat(n,page){
+  const m=MATS.find(x=>x.n===n); if(!m) return;
+  const v=document.getElementById("viewer"); v.hidden=false; document.body.classList.add("noscroll");
+  document.getElementById("vTitle").textContent=m.n+" · "+m.name;
+  document.getElementById("vToc").innerHTML=`<option value="">Ir para a parte…</option>`+m.toc.map(([t,p])=>`<option value="${p}">${esc(t)} · p. ${p}</option>`).join("");
+  document.getElementById("vTot").textContent="/ "+m.pages;
+  document.getElementById("vDl").href="pdf/"+n+".pdf";
+  const msg=document.getElementById("vMsg"), cv=document.getElementById("vCanvas");
+  V.want=n; V.page=page||1; 
+  if(!pdfReady()){ fail("O leitor de PDF do painel não carregou nesta visualização.", new Error("pdfjsLib="+typeof window.pdfjsLib+", pdfjsWorker="+typeof window.pdfjsWorker)); return; }
+  if(V.n!==n){
+    V.doc=null; V.n=n; cv.hidden=true; msg.hidden=false; msg.textContent="Carregando "+m.name+"…";
+    try{
+      let buf=V.cache[n];
+      if(!buf){ const r=await fetch("pdf/"+n+".pdf"); if(!r.ok) throw new Error("HTTP "+r.status+" ao buscar o material "+n); buf=await r.arrayBuffer(); V.cache={[n]:buf}; }
+      V.doc=await pdfjsLib.getDocument({data:buf.slice(0),disableFontFace:false,isEvalSupported:false}).promise;
+    }catch(e){ V.n=null; fail("Não foi possível abrir este material no leitor do painel.", e); return; }
+  }
+  go(page||1);
+}
+function go(p){
+  if(!V.doc) return; p=Math.max(1,Math.min(V.doc.numPages,p|0||1)); V.page=p;
+  document.getElementById("vPg").value=p;
+  try{ localStorage.setItem("pg-"+V.n,String(p)); }catch(_){}
+  if(V.busy){ V.pending=p; return; } draw();
+}
+async function draw(){
+  V.busy=true; const p=V.page;
+  try{
+    const pg=await V.doc.getPage(p); const box=document.getElementById("vPage");
+    const base=pg.getViewport({scale:1}); const fit=Math.min(1.6,(box.clientWidth-24)/base.width);
+    const sc=fit*V.zoom, dpr=Math.min(window.devicePixelRatio||1,2.5);
+    const vp=pg.getViewport({scale:sc*dpr}); const cv=document.getElementById("vCanvas");
+    cv.width=vp.width; cv.height=vp.height; cv.style.width=(vp.width/dpr)+"px"; cv.style.height=(vp.height/dpr)+"px";
+    await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    cv.hidden=false; document.getElementById("vMsg").hidden=true; box.scrollTop=0;
+  }catch(e){ fail("Não foi possível mostrar esta página no leitor do painel.", e); }
+  V.busy=false; if(V.pending&&V.pending!==p){ const q=V.pending; V.pending=null; V.page=q; draw(); } else V.pending=null;
+}
+function closeViewer(){ document.getElementById("viewer").hidden=true; document.body.classList.remove("noscroll"); if(view==="materiais") renderMats(); }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-open]"); if(!b) return; e.preventDefault(); openMat(b.dataset.open, parseInt(b.dataset.page)||1); });
+document.getElementById("vClose").onclick=closeViewer;
+document.getElementById("vPrev").onclick=()=>go(V.page-1);
+document.getElementById("vNext").onclick=()=>go(V.page+1);
+document.getElementById("vPg").onchange=e=>go(parseInt(e.target.value));
+document.getElementById("vToc").onchange=e=>{ if(e.target.value) go(parseInt(e.target.value)); e.target.value=""; };
+document.getElementById("vIn").onclick=()=>{ V.zoom=Math.min(3,V.zoom*1.25); draw(); };
+document.getElementById("vOut").onclick=()=>{ V.zoom=Math.max(.5,V.zoom/1.25); draw(); };
+document.addEventListener("keydown",e=>{ if(document.getElementById("viewer").hidden) return; if(e.target.matches("input,select,textarea")) return;
+  if(e.key==="Escape") closeViewer(); if(e.key==="ArrowRight") go(V.page+1); if(e.key==="ArrowLeft") go(V.page-1); });
+let tx=null; const vpEl=document.getElementById("vPage");
+vpEl.addEventListener("touchstart",e=>{ tx=e.touches.length===1?[e.touches[0].clientX,e.touches[0].clientY]:null; },{passive:true});
+vpEl.addEventListener("touchend",e=>{ if(!tx||V.zoom>1.01) return; const t=e.changedTouches[0], dx=t.clientX-tx[0], dy=t.clientY-tx[1]; if(Math.abs(dx)>70&&Math.abs(dx)>2*Math.abs(dy)) go(V.page+(dx<0?1:-1)); tx=null; });
+window.addEventListener("resize",()=>{ if(!document.getElementById("viewer").hidden&&V.doc) draw(); });
+
+let view="hoje";
+function renderAll(keepFocus){
+  const ae=document.activeElement, id=ae&&ae.id, s=ae&&ae.selectionStart;
+  const openRows=[...document.querySelectorAll("#v-cronograma details[open] .log")].map(x=>x.dataset.k);
+  countdown();
+  if(view==="hoje") renderHoje();
+  if(view==="cronograma"){ renderCrono(); openRows.forEach(k=>{const l=document.querySelector(`#v-cronograma .log[data-k="${k}"]`); if(l) l.closest("details").open=true;}); }
+  if(view==="desempenho") renderDes();
+  if(view==="simulados") renderSim();
+  if(view==="erros") renderErr();
+  if(view==="materiais") renderMats();
+  if(view==="backup") renderBackup();
+  if(keepFocus&&id){ const n=document.getElementById(id); if(n){ n.focus(); try{ if(s!=null) n.setSelectionRange(s,s);}catch(_){} } }
+}
+function route(){
+  const h=(location.hash||"#hoje").slice(1); view=["hoje","cronograma","desempenho","simulados","erros","materiais","backup"].includes(h)?h:"hoje";
+  document.querySelectorAll("[data-view]").forEach(s=>s.hidden=s.dataset.view!==view);
+  document.querySelectorAll("nav.tabs a").forEach(a=>{ if(a.dataset.v===view) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  renderAll(false);
+}
+window.addEventListener("hashchange",route);
+route();
+
+// armazenamento local
+const KEY="painel-trt8-v1";
+function loadStore(){ try{ return JSON.parse(localStorage.getItem(KEY)||"{}"); }catch(_){ return null; } }
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify({dias:LOG, simulados:SIM, erros:ERR, salvo:new Date().toISOString()})); return true; }catch(_){ setStatus("Não foi possível salvar no aparelho. Exporte um backup na aba Backup.","warn"); return false; } }
+let rt=null; const later=()=>{ clearTimeout(rt); rt=setTimeout(()=>{ const a=document.activeElement; if(!(a&&(a.matches(".log [data-f]")||a.closest("#v-simulados")||a.closest("#errForm")))) renderAll(true); },50); };
+db={
+  doc(path){ const [col,id]=path.split("/"); return {
+    async set(d){ if(col==="dias") LOG[id]=d; else if(col==="simulados") SIM[id]=d; persist(); },
+    async update(p){ const e=ERR.find(x=>x.id===id); if(e) Object.assign(e,p); persist(); later(); },
+    async delete(){ ERR=ERR.filter(x=>x.id!==id); persist(); later(); } }; },
+  collection(col){ return { async add(d){ ERR.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),...d}); persist(); later(); } }; }
+};
+(function(){
+  const st=loadStore();
+  if(st===null){ setStatus("Este navegador não permite guardar registros no aparelho. Os registros não serão salvos.","warn"); db=null; return; }
+  LOG=st.dias||{}; SIM=st.simulados||{}; ERR=st.erros||[]; canWrite=true;
+  try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(_){}
+  renderAll(false);
+})();
+
+function renderBackup(){
+  const el=document.getElementById("v-backup"); const st=loadStore()||{};
+  el.innerHTML=`<h2>Backup dos registros</h2>
+  <p class="note">Os registros ficam só neste aparelho. Exporte um backup toda semana, por exemplo no domingo de revisão, e guarde o arquivo no app Arquivos ou no seu e-mail. Para levar os registros a outro aparelho, importe o arquivo lá.</p>
+  <div class="card" style="display:grid;gap:10px">
+    <div class="meta">${Object.keys(LOG).length} dias com registro · ${Object.keys(SIM).length} simulados · ${ERR.length} erros${st.salvo?" · última gravação em "+new Date(st.salvo).toLocaleString("pt-BR"):""}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" id="bExp">Exportar backup</button>
+    <label class="btn ghost" style="display:inline-flex;align-items:center;cursor:pointer">Importar backup<input type="file" id="bImp" accept=".json,application/json" hidden></label></div>
+    <span class="saved" id="bMsg"></span>
+  </div>
+  <h2>Materiais sem internet</h2>
+  <p class="note">Cada material fica guardado no aparelho depois de aberto uma vez. Para guardar todos de uma vez (cerca de 55 MB), use o botão abaixo com Wi-Fi.</p>
+  <div class="card" style="display:grid;gap:10px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" class="btn" id="bAll">Guardar todos os materiais</button><span class="saved" id="bAllMsg"></span></div></div>`;
+  document.getElementById("bExp").onclick=()=>{
+    const data=JSON.stringify({app:"Painel TRT8",versao:1,exportado:new Date().toISOString(),dias:LOG,simulados:SIM,erros:ERR},null,1);
+    const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+    const a=document.createElement("a"); a.href=url; a.download="backup_painel_trt8_"+TODAY+".json"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000); document.getElementById("bMsg").textContent="Backup gerado. Salve o arquivo no app Arquivos.";
+  };
+  document.getElementById("bImp").onchange=async e=>{ const f=e.target.files[0]; if(!f) return; const msg=document.getElementById("bMsg");
+    try{ const d=JSON.parse(await f.text()); if(!d||d.app!=="Painel TRT8") throw 0;
+      LOG=d.dias||{}; SIM=d.simulados||{}; ERR=d.erros||[]; persist(); renderBackup(); document.getElementById("bMsg").textContent="Backup importado.";
+    }catch(_){ msg.textContent="Este arquivo não é um backup do Painel TRT8."; } };
+  document.getElementById("bAll").onclick=async()=>{ const m=document.getElementById("bAllMsg"); let ok=0;
+    for(const x of MATS){ m.textContent=`Guardando ${x.n} de 15…`; try{ const r=await fetch("pdf/"+x.n+".pdf"); if(r.ok){ await r.arrayBuffer(); ok++; } }catch(_){} }
+    m.textContent= ok===MATS.length ? "Os 15 materiais estão guardados no aparelho." : `${ok} de 15 guardados. Confira a conexão e toque de novo.`; };
+}
+window.addEventListener("pagehide",()=>{ if(canWrite) persist(); }); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"&&canWrite) persist(); });
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
+</script>
+</body>
+</html>
