@@ -589,7 +589,7 @@ function renderBackup(){
   document.getElementById("bImp").onchange=async e=>{ const f=e.target.files[0]; if(!f) return; const msg=document.getElementById("bMsg");
     try{ const d=JSON.parse(await f.text()); if(!d||d.app!=="Painel TRT8") throw 0;
       LOG=d.dias||{}; SIM=d.simulados||{}; ERR=d.erros||[]; persist(); renderBackup(); document.getElementById("bMsg").textContent="Backup importado.";
-    }catch(_){ msg.textContent="Este arquivo não é um backup do Painel TRT8."; } };
+    }catch(_){ msg.textContent="Este arquivo não é um backup do Painel de Estudos."; } };
   document.getElementById("bAll").onclick=async()=>{ const m=document.getElementById("bAllMsg"); let ok=0;
     for(const x of MATS){ m.textContent=`Guardando ${x.n} de 15…`; try{ const r=await fetch("pdf/"+x.n+".pdf"); if(r.ok){ await r.arrayBuffer(); ok++; } }catch(_){} }
     m.textContent= ok===MATS.length ? "Os 15 materiais estão guardados no aparelho." : `${ok} de 15 guardados. Confira a conexão e toque de novo.`; };
