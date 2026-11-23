@@ -1,6 +1,6 @@
 {
- "name": "Painel TRT8",
- "short_name": "Painel TRT8",
+ "name": "PAINEL DE ESTUDOS",
+ "short_name": "PAINEL DE ESTUDOS",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
