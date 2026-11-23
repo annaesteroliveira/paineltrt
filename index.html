@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1D6B5C">
+<meta name="theme-color" content="#F8DDE3">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,23 +14,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* Layout: painel de acompanhamento em abas; cabeçalho com contagem regressiva, conteúdo em coluna única de até 980px */
+/* Paleta: bege e rosa claro. Layout: painel de acompanhamento em abas; cabeçalho com contagem regressiva, conteúdo em coluna única de até 980px */
 :root{
-  --bg:#F3F5F4; --surface:#FFFFFF; --sunk:#E8ECEA; --line:#D3DAD7; --fg:#18221F; --muted:#5B6A65;
-  --accent:#1D6B5C; --accent-ink:#FFFFFF; --accent-soft:#D9EBE6;
-  --ok:#2E7D4F; --ok-soft:#DDF0E3; --warn:#A86A06; --warn-soft:#F7EBD2; --bad:#B23A3A; --bad-soft:#F6DEDC;
+  --bg:#FBF3EA; --surface:#FFFBF7; --sunk:#F4E7DB; --line:#EAD8CA; --fg:#3A2A2E; --muted:#7A6265;
+  --accent:#B9536A; --accent-ink:#FFFFFF; --accent-soft:#F8DDE3;
+  --ok:#3F7D57; --ok-soft:#E1F0E4; --warn:#A8690A; --warn-soft:#F8EBD3; --bad:#B23A48; --bad-soft:#F8DEDF;
   --display:"Source Serif 4", Georgia, "Times New Roman", serif;
   --body:Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#111816; --surface:#18211E; --sunk:#0D1311; --line:#2B3834; --fg:#E4ECE9; --muted:#93A39E;
-  --accent:#5FBFA8; --accent-ink:#0C1613; --accent-soft:#1E3A33;
-  --ok:#6CC58F; --ok-soft:#1D3527; --warn:#E3AE52; --warn-soft:#3A2E17; --bad:#EE8A84; --bad-soft:#3D2120; color-scheme:dark }}
+  --bg:#231A1C; --surface:#2D2225; --sunk:#1B1315; --line:#46363A; --fg:#F4E8E4; --muted:#BFA7A9;
+  --accent:#EFA3B3; --accent-ink:#2A1418; --accent-soft:#4A2C33;
+  --ok:#7CC897; --ok-soft:#1F3427; --warn:#E6B05A; --warn-soft:#3B2E18; --bad:#F08A92; --bad-soft:#3F2124; color-scheme:dark }}
 :root[data-theme="dark"]{
-  --bg:#111816; --surface:#18211E; --sunk:#0D1311; --line:#2B3834; --fg:#E4ECE9; --muted:#93A39E;
-  --accent:#5FBFA8; --accent-ink:#0C1613; --accent-soft:#1E3A33;
-  --ok:#6CC58F; --ok-soft:#1D3527; --warn:#E3AE52; --warn-soft:#3A2E17; --bad:#EE8A84; --bad-soft:#3D2120; color-scheme:dark }
+  --bg:#231A1C; --surface:#2D2225; --sunk:#1B1315; --line:#46363A; --fg:#F4E8E4; --muted:#BFA7A9;
+  --accent:#EFA3B3; --accent-ink:#2A1418; --accent-soft:#4A2C33;
+  --ok:#7CC897; --ok-soft:#1F3427; --warn:#E6B05A; --warn-soft:#3B2E18; --bad:#F08A92; --bad-soft:#3F2124; color-scheme:dark }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
