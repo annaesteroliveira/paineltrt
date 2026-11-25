@@ -57,13 +57,26 @@ function addErr(q,motivo,nota,origem){
 }
 
 // ---------- renderização de uma questão ----------
-function para(t){ return esc(t).split("\n").map(l=>l.startsWith("## ")?`<h4>${l.slice(3)}</h4>`:`<p>${l}</p>`).join(""); }
+function para(t){
+  const out=[]; let tab=null;
+  for(const l of String(t||"").split("\n")){
+    if(l.startsWith("|")){ const cells=l.slice(1).split("|"); if(!tab){ tab=[]; out.push(()=>`<table class="qtab"><thead><tr>${tab[0].map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${tab.slice(1).map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`); } tab.push(cells); continue; }
+    tab=null; out.push(l.startsWith("## ")?`<h4>${esc(l.slice(3))}</h4>`:`<p>${esc(l)}</p>`);
+  }
+  return out.map(x=>typeof x==="function"?x():x).join("");
+}
+function pasText(p){
+  const t=PUB&&PUB.pas&&PUB.pas[p]; if(!t) return null;
+  if(t.ln) return `${t.h?`<p class="meta">${esc(t.h)}</p>`:""}<ol class="qlines">${t.ln.map(l=>`<li>${esc(l)}</li>`).join("")}</ol>${t.src?`<p class="meta">${esc(t.src)}</p>`:""}`;
+  return para((t.p||[]).join("\n"));
+}
+function orig(src,label){ return `<details class="qorig"><summary>${label||"Ver original"}</summary><img src="q/${src}" alt="Imagem original da prova" loading="lazy"></details>`; }
 function qBody(q){
   let h="";
-  if(q.pas&&q.pas.length) h+=`<details class="qpas"><summary>Texto de apoio</summary>${q.pas.map(p=>`<img src="q/${p}" alt="Texto de apoio da questão" loading="lazy">`).join("")}</details>`;
+  if(q.pas&&q.pas.length) h+=`<details class="qpas"><summary>Texto de apoio</summary>${q.pas.map(p=>{ const tx=pasText(p); return tx?`<div class="qtx">${tx}</div>${orig(p,"Ver o texto original")}`:`<img src="q/${p}" alt="Texto de apoio da questão" loading="lazy">`; }).join("")}</details>`;
   if(q.tx) h+=`<details class="qpas"><summary>Texto de apoio</summary><div class="qtx">${para(q.tx)}</div></details>`;
-  if(q.img) h+=`<img class="qimg" src="q/${q.img}" alt="Enunciado e alternativas da questão" loading="lazy">`;
-  else h+=`<div class="qstem">${para(q.s)}</div>`;
+  if(q.img&&!q.s) h+=`<img class="qimg" src="q/${q.img}" alt="Enunciado e alternativas da questão" loading="lazy">`;
+  else { h+=`<div class="qstem">${para(q.s)}</div>`; if(q.fig) h+=`<img class="qimg" src="q/${q.img}" alt="Questão original com a figura" loading="lazy">`; else if(q.img&&q.dest) h+=`<p class="meta">Os destaques do enunciado (sublinhado, negrito) aparecem só no original:</p>`+orig(q.img,"Ver original da prova").replace("<details ","<details open "); else if(q.img) h+=orig(q.img,"Ver original da prova"); }
   return h;
 }
 function optsHtml(q,state){ // state: {sel, done, x}
