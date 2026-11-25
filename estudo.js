@@ -36,8 +36,8 @@ async function importPack(file,msgEl){
     if(!d||d.tipo!=="pacote"||!Array.isArray(d.banco)) throw new Error("formato");
     msgEl.textContent="Guardando no aparelho…";
     await idbSet("pack",d); PACK=d; indexAll();
-    msgEl.textContent=`Pacote importado: ${d.banco.length.toLocaleString("pt-BR")} questões e ${Object.keys(d.simulados||{}).length} simulados.`;
-    renderAll(false);
+    PACKMSG=`Pacote importado: ${d.banco.length.toLocaleString("pt-BR")} questões e ${Object.keys(d.simulados||{}).length} simulados.`;
+    renderAll(false); setStatus(PACKMSG); setTimeout(()=>setStatus(""),8000);
   }catch(e){ msgEl.textContent = e&&e.message==="formato" ? "Este arquivo não é o pacote de estudos do painel." : "Não foi possível importar o pacote. Tente de novo; se persistir, libere espaço no aparelho."; }
 }
 function packCard(){
@@ -157,8 +157,8 @@ function qCard(q){
   </div>`;
 }
 document.addEventListener("click",e=>{
-  const card=e.target.closest("#v-questoes .qcard"); if(!card) return;
-  const q=QMAP[card.dataset.qid];
+  const card=e.target.closest("#v-questoes .qcard[data-qid]"); if(!card) return;
+  const q=QMAP[card.dataset.qid]; if(!q) return;
   const o=e.target.closest("[data-opt]"); if(o&&!QST.r[q.id]){ qSel=o.dataset.opt; card.querySelectorAll("[data-opt]").forEach(b=>b.classList.toggle("sel",b===o)); const r=document.getElementById("qResp"); if(r) r.disabled=false; return; }
   if(e.target.id==="qChute"){ qChute=e.target.checked; return; }
   if(e.target.id==="qResp"&&qSel){ answer(q,qSel,qChute,"banco"); renderQAfter(q); return; }
@@ -347,4 +347,153 @@ renderHoje = function(){
   box.insertAdjacentHTML("afterend",`<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1"><b>Questões do dia no banco</b><div class="meta">${qs.length} questões ligadas aos tópicos de hoje · ${feitas} resolvidas</div></div><button type="button" class="btn" id="goQHoje">Resolver agora</button></div>`);
   document.getElementById("goQHoje").onclick=()=>{ Object.assign(QF,{fonte:"todas",mat:"todas",tema:"todos",dia:"hoje",dif:"todos",sit:"nao",i:0}); location.hash="#questoes"; };
 };
+// ---------- revisão programada dos erros ----------
+function addDays(d,n){ const x=parse(d); x.setDate(x.getDate()+n); return iso(x); }
+function sundayOf(d){ const x=parse(d); x.setDate(x.getDate()+((7-x.getDay())%7)); return iso(x); }
+function dueOf(e){ const b=e.base||e.data||TODAY; const d1=sundayOf(b), d2=addDays(d1,7); if(e.r1!=="Sim") return {n:1,d:d1}; if(e.r2!=="Sim") return {n:2,d:d2}; return null; }
+function dueErrs(){ return ERR.filter(e=>{ const u=dueOf(e); return u&&u.d<=TODAY; }); }
+function revFila(){ return dueErrs().filter(e=>e.qid&&QMAP[e.qid]).sort((a,b)=>dueOf(a).d.localeCompare(dueOf(b).d)); }
+let REV=null; // {ids:[errId], i, sel, done:{errId:{x,ok}}}
+function startRev(){ REV={ids:revFila().map(e=>e.id),i:0,sel:null,done:{}}; location.hash="#questoes"; renderQ(); }
+const _renderQ0 = renderQ;
+renderQ = function(){
+  if(!REV) return _renderQ0();
+  const el=document.getElementById("v-questoes");
+  const n=REV.ids.length; if(REV.i>=n) REV.i=Math.max(0,n-1);
+  const e=ERR.find(x=>x.id===REV.ids[REV.i]); const q=e&&QMAP[e.qid];
+  const feitos=Object.keys(REV.done).length, certos=Object.values(REV.done).filter(x=>x.ok).length;
+  if(!n||!q){ el.innerHTML=`<h2>Revisão de erros</h2><div class="empty">Nenhum erro com revisão marcada para hoje.</div><div><button type="button" class="btn ghost" id="revSair">Voltar ao banco</button></div>`; document.getElementById("revSair").onclick=()=>{ REV=null; renderQ(); }; return; }
+  const u=dueOf(e)||{n:2}, dn=REV.done[e.id];
+  el.innerHTML=`<div class="simtop"><h2 style="margin:0">Revisão de erros</h2><button type="button" class="btn ghost" id="revSair">Sair da revisão</button></div>
+  <p class="meta">${REV.i+1} de ${n} · ${feitos} refeitos nesta rodada, ${certos} certos. Se você acertar, a revisão é marcada no caderno; se errar, o erro volta para a fila com novas datas e fica marcado como reincidente.</p>
+  <div class="card qcard" data-revq="${e.id}">
+    <div class="qhead"><span class="meta">${esc(q.p)}</span><span class="pill p-hoje">${dn?"Refeita":u.n+"ª revisão"}</span></div>
+    <div class="qtema"><b>${esc(q.m)}</b> · ${esc(q.t||"")}${e.rein?` · <span class="pill p-atraso">reincidente (${e.rein})</span>`:""}</div>
+    ${qBody(q)}
+    ${optsHtml(q,{sel:REV.sel,done:!!dn,x:dn&&dn.x})}
+    ${dn?`<div class="qfb ${dn.ok?"good":"bad"}"><b>${dn.ok?"Certo.":"Errado de novo."}</b> Gabarito: ${q.a}${dn.ok?` · ${u.n===1&&e.r1==="Sim"&&e.r2!=="Sim"?"1ª revisão registrada":"revisão registrada"}`:" · o erro voltou para a fila"}</div>${q.c?`<details class="qcom" open><summary>Comentário</summary>${para(q.c)}</details>`:""}${e.nota?`<div class="meta">Sua anotação: ${esc(e.nota)}</div>`:""}`
+      :`<div class="qact"><span class="chk"></span><button type="button" class="btn" id="revResp" ${REV.sel?"":"disabled"}>Responder</button></div>`}
+    <div class="qnav"><button type="button" class="btn ghost" id="revPrev" ${REV.i?"":"disabled"}>‹ Anterior</button><button type="button" class="btn ghost" id="revNext" ${REV.i<n-1?"":"disabled"}>Próxima ›</button></div>
+  </div>`;
+  document.getElementById("revSair").onclick=()=>{ REV=null; renderQ(); };
+};
+document.addEventListener("click",ev=>{
+  if(!REV) return; const card=ev.target.closest("[data-revq]"); if(!card) return;
+  const e=ERR.find(x=>x.id===card.dataset.revq); const q=QMAP[e.qid];
+  const o=ev.target.closest("[data-opt]"); if(o&&!REV.done[e.id]){ REV.sel=o.dataset.opt; card.querySelectorAll("[data-opt]").forEach(b=>b.classList.toggle("sel",b===o)); document.getElementById("revResp").disabled=false; return; }
+  if(ev.target.id==="revResp"&&REV.sel){ const ok=REV.sel===q.a; REV.done[e.id]={x:REV.sel,ok};
+    (e.rev??=[]).push({d:TODAY,x:REV.sel,ok});
+    if(ok){ if(e.r1!=="Sim") e.r1="Sim"; else e.r2="Sim"; }
+    else { e.rein=(e.rein||0)+1; e.r1=""; e.r2=""; e.base=TODAY; }
+    persist(); renderQ(); return; }
+  if(ev.target.id==="revNext"||ev.target.id==="revPrev"){ REV.i+=ev.target.id==="revNext"?1:-1; REV.sel=null; renderQ(); window.scrollTo({top:0}); }
+});
+window.addEventListener("hashchange",()=>{ if(location.hash!=="#questoes") REV=null; });
+// caderno: datas de revisão e reincidência
+const _renderErr1 = renderErr;
+renderErr = function(){
+  _renderErr1();
+  const el=document.getElementById("v-erros");
+  el.querySelectorAll(".err").forEach(c=>{ const e=ERR.find(x=>x.id===c.dataset.id); if(!e) return; const u=dueOf(e);
+    const t=u?(u.d<=TODAY?`<span class="pill p-atraso">${u.n}ª revisão: ${u.d<TODAY?"atrasada desde "+br(u.d):"hoje"}</span>`:`<span class="pill p-futuro">${u.n}ª revisão em ${br(u.d)}</span>`):"";
+    const r=e.rein?`<span class="pill p-atraso">reincidente (${e.rein})</span>`:"";
+    if(t||r) c.querySelector(".mrow").insertAdjacentHTML("afterend",`<div style="display:flex;gap:6px;flex-wrap:wrap">${t}${r}</div>`); });
+  const fila=revFila(), sem=dueErrs().length-fila.length;
+  const p=el.querySelector("p.meta");
+  if(p) p.insertAdjacentHTML("afterend",`<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1"><b>Revisão de hoje</b><div class="meta">${dueErrs().length?`${dueErrs().length} erros com revisão vencida${sem?`, dos quais ${sem} registrados à mão (revise pelo material e marque abaixo)`:""}`:"Nenhum erro com revisão vencida."}</div></div>${fila.length?`<button type="button" class="btn" data-startrev>Refazer ${fila.length} no app</button>`:""}</div>`);
+};
+document.addEventListener("click",ev=>{ if(ev.target.closest("[data-startrev]")) startRev(); });
+
+// ---------- botão de questões por tópico no cronograma ----------
+const _itemHtml = itemHtml;
+itemHtml = function(r){
+  let h=_itemHtml(r);
+  if(!(PUB||PACK)||!isStudy(r)) return h;
+  const qs=banco().filter(q=>q.d===r.d&&q.m===r.m); if(!qs.length) return h;
+  const nr=qs.filter(q=>!QST.r[q.id]).length;
+  const btn=`<div><button type="button" class="btn ghost" data-qtop="${r.d}|${esc(r.m)}">Questões deste tópico (${qs.length}${nr<qs.length?`, ${nr} por fazer`:""})</button></div>`;
+  return h.replace(/<\/div>\s*$/,btn+"</div>");
+};
+function qtopBtn(r){ if(!(PUB||PACK)||!isStudy(r)) return ""; const qs=banco().filter(q=>q.d===r.d&&q.m===r.m); if(!qs.length) return ""; const nr=qs.filter(q=>!QST.r[q.id]).length;
+  return `<div><button type="button" class="btn ghost" data-qtop="${r.d}|${esc(r.m)}">Questões deste tópico (${qs.length}${nr<qs.length?`, ${nr} por fazer`:""})</button></div>`; }
+const _renderCrono = renderCrono;
+renderCrono = function(){ _renderCrono(); document.querySelectorAll("#v-cronograma details.row").forEach(dt=>{ const l=dt.querySelector(".log"); if(!l) return; const r=ROWS.find(x=>x.k===l.dataset.k); const h=r&&qtopBtn(r); if(h) dt.querySelector(".body").insertAdjacentHTML("beforeend",h); }); };
+document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-qtop]"); if(!b) return; const [d,m]=b.dataset.qtop.split("|");
+  const qs=banco().filter(q=>q.d===d&&q.m===m); REV=null;
+  Object.assign(QF,{fonte:"todas",mat:m,tema:"todos",dia:d,dif:"todos",sit:qs.some(q=>!QST.r[q.id])?"nao":"todas",ord:"ordem",i:0}); qSel=null;
+  if(location.hash==="#questoes") renderQ(); else location.hash="#questoes"; window.scrollTo({top:0}); });
+
+// ---------- Hoje: revisão de erros ----------
+const _renderHoje1 = renderHoje;
+renderHoje = function(){
+  _renderHoje1();
+  const due=dueErrs(); if(!due.length) return;
+  const fila=revFila(); const el=document.getElementById("v-hoje"); const box=el.querySelector(".kpis"); if(!box) return;
+  box.insertAdjacentHTML("afterend",`<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-color:var(--bad)"><div style="flex:1"><b>Erros para revisar</b><div class="meta">${due.length} com revisão marcada até hoje${due.length>fila.length?` (${due.length-fila.length} registrados à mão: revise pelo caderno)`:""}</div></div>${fila.length?`<button type="button" class="btn" data-startrev>Refazer erros</button>`:`<a class="btn" href="#erros">Abrir caderno</a>`}</div>`);
+};
+
+// ---------- projeção de nota ----------
+const PESO = {G:{"Língua Portuguesa":7.8,"Raciocínio Lógico e Matemática":6.2,"Informática":3.8,"Legislação e Direitos Humanos":2.2},
+              E:{"Direito do Trabalho":9,"Direito Processual do Trabalho":7.2,"Direito Constitucional":6.8,"Direito Civil":6.8,"Direito Administrativo":5.2,"Direito Processual Civil":5}};
+function acertoMaterias(){ // app + registros diários
+  const o={}; const add=(m,n,a,d)=>{ const v=(o[m]??={n:0,a:0,ult:null}); v.n+=n; v.a+=a; if(n&&(!v.ult||d>v.ult)) v.ult=d; };
+  for(const id in QST.r){ const q=QMAP[id]; if(q) add(q.m,1,QST.r[id].ok?1:0,QST.r[id].d); }
+  for(const r of ROWS){ const l=LOG[r.k]; if(l&&num(l.questoes)) add(r.m,num(l.questoes),num(l.acertos),r.d); }
+  return o;
+}
+function projecao(){
+  const ac=acertoMaterias(); const rows=[]; let G=0,E=0,falta=[];
+  for(const b of ["G","E"]) for(const [m,w] of Object.entries(PESO[b])){ const v=ac[m]; const ok=v&&v.n>=10; const p=ok?v.a/v.n:null;
+    if(ok){ if(b==="G") G+=p*w; else E+=p*w; } else falta.push(m);
+    rows.push({b,m,w,p,n:v?v.n:0,perde:ok?(1-p)*w*(b==="G"?10/20:20/40)/3:null}); }
+  const nota=falta.length?null:(G/20*10+2*E/40*10)/3;
+  return {rows,nota,G,E,falta};
+}
+const _renderDes1 = renderDes;
+renderDes = function(){
+  _renderDes1();
+  const el=document.getElementById("v-desempenho"); const pj=projecao();
+  const lim=pj.rows.filter(r=>r.perde!=null).sort((a,b)=>b.perde-a.perde);
+  const fmt2=x=>x.toFixed(2).replace(".",",");
+  const proj=`<h2>Projeção de nota (se a prova fosse hoje)</h2>
+  ${pj.nota!=null?`<div class="kpis"><div class="kpi"><div class="v">${fmt2(pj.nota)}</div><div class="l">nota objetiva estimada (mínimo 6,00)</div><div class="bar"><i class="${pj.nota>=7?"good":pj.nota>=6?"mid":"low"}" style="width:${pj.nota*10}%"></i></div></div><div class="kpi"><div class="v">${fmt1(pj.G)}/20</div><div class="l">acertos estimados em gerais</div></div><div class="kpi"><div class="v">${fmt1(pj.E)}/40</div><div class="l">acertos estimados em específicas</div></div></div>`
+    :`<div class="banner">A nota estimada aparece quando todas as matérias tiverem pelo menos 10 questões resolvidas. Faltam: ${pj.falta.map(esc).join("; ")}.</div>`}
+  <div class="tablewrap"><table><thead><tr><th>Matéria</th><th class="n">Questões na prova (média)</th><th>Seu acerto</th><th class="n">Pontos que deixa na nota</th></tr></thead><tbody>
+  ${pj.rows.slice().sort((a,b)=>(b.perde??-1)-(a.perde??-1)).map(r=>`<tr><td>${esc(r.m)} <span class="meta">${r.b==="G"?"gerais":"específicas"}</span></td><td class="n">${fmt1(r.w)}</td><td>${r.p==null?`<span class="meta">${r.n} de 10 questões</span>`:accCell(Math.round(r.p*1000),1000)}</td><td class="n">${r.perde==null?"–":fmt2(r.perde)}</td></tr>`).join("")}
+  </tbody></table></div>
+  <p class="note">A estimativa aplica o seu percentual de acerto em cada matéria (questões do app e do registro diário) à quantidade média de questões de cada matéria nos cinco simulados modelo TRT8, e calcula a nota pela fórmula do edital: (gerais + 2 × específicas) ÷ 3. A coluna da direita mostra quanto cada matéria tira da nota hoje; as primeiras linhas são onde a hora de reserva rende mais. É uma referência de tendência, não uma previsão: o edital não fixa o número de questões por matéria.</p>`;
+  // evolução semanal
+  const ac=acertoMaterias();
+  const wk={}; const addw=(m,d,n,a)=>{ const w=weekKey(d); const o=((wk[m]??={})[w]??={n:0,a:0}); o.n+=n; o.a+=a; };
+  for(const id in QST.r){ const q=QMAP[id]; if(q) addw(q.m,QST.r[id].d,1,QST.r[id].ok?1:0); }
+  for(const r of ROWS){ const l=LOG[r.k]; if(l&&num(l.questoes)) addw(r.m,r.d,num(l.questoes),num(l.acertos)); }
+  const weeks=[...new Set(Object.values(wk).flatMap(o=>Object.keys(o)))].sort();
+  const sel=window.__evoMat||"todas";
+  const series=(sel==="todas"?MATERIAS:[sel]).filter(m=>wk[m]);
+  const W=Math.max(320,60+weeks.length*70), H=200, x=i=>40+i*((W-60)/Math.max(1,weeks.length-1)), y=p=>H-30-p*(H-50);
+  const pal=["#B9536A","#3F7D57","#A8690A","#4C6FA8","#7A4FA0","#2E8A8A","#9A5B3B","#5C6B2E","#B03A7A","#4A4A4A"];
+  const lines=series.map((m,si)=>{ const pts=weeks.map((w,i)=>{ const o=wk[m][w]; return o&&o.n?[x(i),y(o.a/o.n),o]:null; }).filter(Boolean);
+    const c=pal[MATERIAS.indexOf(m)%pal.length];
+    return `<polyline fill="none" stroke="${c}" stroke-width="2" points="${pts.map(p=>p[0]+","+p[1]).join(" ")}"></polyline>${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${c}"><title>${esc(m)}: ${Math.round(100*p[2].a/p[2].n)}% (${p[2].n} questões)</title></circle>`).join("")}`; }).join("");
+  const chart=weeks.length?`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Acerto semanal por matéria">
+    <rect x="34" y="${y(1)}" width="${W-40}" height="${y(.75)-y(1)}" fill="var(--ok-soft)"></rect>
+    ${[0,.25,.5,.75,1].map(p=>`<line x1="34" x2="${W-6}" y1="${y(p)}" y2="${y(p)}" stroke="var(--line)"></line><text x="4" y="${y(p)+4}" font-size="10" fill="var(--muted)">${p*100}%</text>`).join("")}
+    ${weeks.map((w,i)=>`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="var(--muted)">${br(w)}</text>`).join("")}${lines}</svg>`:`<div class="empty">O gráfico aparece quando houver questões resolvidas.</div>`;
+  const legend=series.map(m=>`<span class="leg"><i style="background:${pal[MATERIAS.indexOf(m)%pal.length]}"></i>${esc(m)}</span>`).join("");
+  const parado=MATERIAS.filter(m=>ROWS.some(r=>r.m===m&&r.d<=TODAY&&isStudy(r))).map(m=>({m,ult:ac[m]&&ac[m].ult})).filter(o=>!o.ult||Math.round((parse(TODAY)-parse(o.ult))/864e5)>10);
+  const evo=`<h2>Evolução semanal do acerto</h2>
+  <div class="filters"><label class="f">Matéria<select id="evoSel"><option value="todas">Todas</option>${MATERIAS.map(m=>`<option ${m===sel?"selected":""}>${esc(m)}</option>`).join("")}</select></label></div>
+  <div class="tablewrap" style="padding:8px">${chart}<div class="legs">${legend}</div></div>
+  <p class="note">A faixa verde marca 75% de acerto ou mais. Cada ponto é uma semana (segunda a domingo); toque no ponto para ver o número de questões.</p>
+  ${parado.length?`<div class="banner warn"><b>Sem questões há mais de 10 dias:</b> ${parado.map(o=>`${esc(o.m)}${o.ult?` (última em ${br(o.ult)})`:" (nenhuma ainda)"}`).join("; ")}.</div>`:""}`;
+  const anchor=el.querySelector("h2:nth-of-type(2)");
+  const wrap=document.createElement("div"); wrap.style.cssText="display:grid;gap:12px"; wrap.innerHTML=proj+evo;
+  if(anchor) anchor.before(wrap); else el.appendChild(wrap);
+  document.getElementById("evoSel").onchange=e=>{ window.__evoMat=e.target.value; renderDes(); };
+};
+
+// ---------- Backup: situação do pacote ----------
+if(typeof renderBackup==="function"){ const _rb=renderBackup; renderBackup=function(){ _rb(); const el=document.getElementById("v-backup"); const c=el.querySelector(".card");
+  c.insertAdjacentHTML("beforebegin",`<div class="banner ${PACK?"":"warn"}">${PACK?`<b>Pacote de estudos importado neste aparelho:</b> ${PACK.banco.length.toLocaleString("pt-BR")} questões comentadas e ${Object.keys(PACK.simulados||{}).length} simulados.`:`<b>Pacote de estudos não importado neste aparelho.</b> Importe o arquivo pacote_estudos_TRT8.json na aba Questões.`}</div>`); }; }
+
 renderAll(false);
